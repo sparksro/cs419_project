@@ -48,7 +48,7 @@ def disconnect():
 
 def get_param(prompt_string):
      stdscr.addstr(2, 2, prompt_string)
-     stdscr.clrtobot()
+     stdscr.clrtoeol()
      stdscr.refresh()
      input = stdscr.getstr(10, 10, 60)
      return input
@@ -143,7 +143,7 @@ while True:
 		counter = 0
 
 		while addr1 != addr2:
-			addr1 = get_param("Enter your email address:    " )
+			addr1 = get_param("Enter your email address:" )
 			cli_text_window.refresh()
 			cli_text_window.clear()	
 			addr2 =  get_param("Re-enter your email address: " )
@@ -163,22 +163,22 @@ while True:
 		  cli_window.clear()
 
 		while pswd1 != pswd2:
-			  cli_window.clear()
-			  cli_text_window.clear()
-			  cli_window.box()
+                        #cli_window.clear()
+                        #cli_text_window.clear()
+                        #cli_window.box()
+                        #cli_text_window.refresh()
+                        pswd1 = get_param("Enter your password:"  
+                        cli_text_window.clear()	
+                        cli_text_window.refresh()
+                        pswd2 = get_param("Re-enter your password:")
+                        cli_text_window.refresh()
+                        cli_text_window.clear()
+                        
+                        if pswd1 != pswd2: 
+                          cli_text_window.clear()
+		  	  cli_text_window.addstr("passwords must match!", curses.color_pair(1))
 			  cli_text_window.refresh()
-			  pswd1 = get_param("Enter your password. - passwords must match!")# bug -- this get_param must be the same size or larger string than the last or it seems to have some left over text stuck in a buffer.  ???  
-			  cli_text_window.clear()	
-		 	  cli_text_window.refresh()
-			  pswd2 = get_param("Re-enter your password: - passwords must match!")
-			  cli_text_window.refresh()
 			  cli_text_window.clear()
-	 
-			  if pswd1 != pswd2:  # bug -- it reffuses to enter this and print the warning.  Its just like the one above!  ????
-		  	    cli_text_window.clear()
-		  	    cli_text_window.addstr("passwords must match!", curses.color_pair(1))
-			    cli_text_window.refresh()
-			    cli_text_window.clear()
 
 		if pswd1 == pswd2:
 		  cli_window.clear()
