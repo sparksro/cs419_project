@@ -167,7 +167,7 @@ while True:
                         #cli_text_window.clear()
                         #cli_window.box()
                         #cli_text_window.refresh()
-                        pswd1 = get_param("Enter your password:"  
+                        pswd1 = get_param("Enter your password:") 
                         cli_text_window.clear()	
                         cli_text_window.refresh()
                         pswd2 = get_param("Re-enter your password:")
