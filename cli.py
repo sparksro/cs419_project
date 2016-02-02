@@ -7,6 +7,7 @@ import curses
 from urllib2 import urlopen
 from HTMLParser import HTMLParser
 from simplejson import loads
+#from json import loads
 import mysql.connector
 from mysql.connector import errorcode
 from os import system
@@ -47,6 +48,7 @@ def disconnect():
 
 def get_param(prompt_string):
      stdscr.addstr(2, 2, prompt_string)
+     stdscr.clrtobot()
      stdscr.refresh()
      input = stdscr.getstr(10, 10, 60)
      return input
@@ -165,7 +167,7 @@ while True:
 			  cli_text_window.clear()
 			  cli_window.box()
 			  cli_text_window.refresh()
-			  pswd1 = get_param("  Enter your password. - passwords must match!")# bug -- this get_param must be the same size or larger string than the last or it seems to have some left over text stuck in a buffer.  ???  
+			  pswd1 = get_param("Enter your password. - passwords must match!")# bug -- this get_param must be the same size or larger string than the last or it seems to have some left over text stuck in a buffer.  ???  
 			  cli_text_window.clear()	
 		 	  cli_text_window.refresh()
 			  pswd2 = get_param("Re-enter your password: - passwords must match!")
@@ -229,7 +231,7 @@ while True:
 		email = get_param("Enter your email address.")
 		cli_text_window.refresh()
 		cli_text_window.clear()
-		pswd = get_param("     Enter your password.")
+		pswd = get_param("Enter your password.")
 		cli_text_window.clear()
 		cli_text_window.refresh()
 		# pull the latest email and password entered.
