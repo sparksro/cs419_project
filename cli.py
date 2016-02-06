@@ -21,6 +21,7 @@ bottom_line = "Press 'M' to see Menu. 'Q' to quit."
 
 varConnected = False;
 status =  "                                 logged-out";
+db = '';
 
 # *********   Functions  ***************************************************************************************
 def make_connection():
@@ -52,6 +53,10 @@ def get_param(prompt_string):
      stdscr.refresh()
      input = stdscr.getstr(10, 10, 60)
      return input
+
+def setQMbottomMenu():
+	stdscr.chgat(curses.LINES-1,7, 1, curses.A_BOLD | curses.color_pair(2))# the M
+	stdscr.chgat(curses.LINES-1,24, 1, curses.A_BOLD | curses.color_pair(1))# the Q
 
 # this currently uses 9 char salting and md5 hashing -although this is probably fairly sucure there are more secure methods out there.
 # this might be an alternative https://pypi.python.org/pypi/scrypt/
@@ -93,7 +98,8 @@ dims = cli_text_window.getmaxyx()
 # text to go in lower text box made by using both iner and outer window
 cli_text_window.addstr("Welcome to the Curses based CLI!") # this is the start up screen
 stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
-stdscr.chgat(curses.LINES-1,7, 1, curses.A_BOLD | curses.color_pair(2))
+setQMbottomMenu()
+
 if status:
   stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
 else:
@@ -110,12 +116,13 @@ cli_window.noutrefresh()
 curses.doupdate()
 
 # *********   Create the event loop  ***************************************************************************************
+cli_text_window.clear()
+cli_text_window.refresh()
+
 
 while True:
 	c =  cli_window.getch()
-	cli_text_window.clear()
-	cli_text_window.refresh()
-
+	
 	if c == ord('m') or c == ord('M'):
 		cli_text_window.refresh()
 		cli_text_window.clear()
@@ -125,9 +132,7 @@ while True:
 		#message = "                               logged out";
 		stdscr.addstr(curses.LINES-1, 0, bottom_line)
 		# Change the R to green, the Q to red, the Connected to green
-		stdscr.chgat(curses.LINES-1,7, 1, curses.A_BOLD | curses.color_pair(2))
-		stdscr.chgat(curses.LINES-1,24, 1, curses.A_BOLD | curses.color_pair(1))
-		#stdscr.chgat(curses.LINES-1,69, 9, curses.A_BOLD | curses.color_pair(2))
+		setQMbottomMenu()
 		
 	if c == ord('1'):
 		curses.echo(1) 
@@ -210,8 +215,7 @@ while True:
 		   varConnected = False;
 		   status =  "                                 logged-out";
 		   stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
-		   stdscr.chgat(curses.LINES-1,7, 1, curses.A_BOLD | curses.color_pair(2))
-		   stdscr.chgat(curses.LINES-1,24, 1, curses.A_BOLD | curses.color_pair(1))
+		   setQMbottomMenu()
 		   stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
 		   cli_text_window.addstr("Your information was stored sucessfully.", curses.color_pair(3))
 		except:
@@ -256,6 +260,7 @@ while True:
 		  cli_window.box()
 		  cli_text_window.refresh()
 		  stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
+		  setQMbottomMenu()
 		  stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
 		  cli_text_window.addstr("You have been logged in.", curses.color_pair(3))
 		else:
@@ -271,11 +276,15 @@ while True:
 	if c == ord('3'):
 		cli_text_window.refresh()
 		cli_text_window.clear()
-		db.close()	
+		try:
+			db.close()
+		except:
+			print "There was a log-out error."
 		varConnected = False;
 		status =  "                                 logged-out";
 		stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
 		stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
+		setQMbottomMenu()
 		cli_text_window.addstr("You have been logged out.", curses.color_pair(3))
 
 	if c == ord('4'):
