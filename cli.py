@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # Advising Schedule Interface 
-# version 1.00
+# version 1.10
 
 import curses
 from urllib2 import urlopen
@@ -26,7 +26,6 @@ db = '';
 # *********   Functions  ***************************************************************************************
 def make_connection():
 	try:
-  	   #db = mysql.connector.connect(user='advising_user', password='VLrMMJSScH6ZLHca', host='52.10.233.116', database='advising_db')
 	   db = MySQLdb.connect("52.10.233.116","advising_user", "VLrMMJSScH6ZLHca",  "advising_db")
 	   varConnected = True;
 	except mysql.connector.Error as err:
@@ -36,16 +35,15 @@ def make_connection():
     	      print("Database does not exist")
   	   else:
     	      print(err)
-	else:
-  	   db.close()
 	return db
 
-def disconnect():
+def disconnect(db):
 	try:
-  	   #db = mysql.connector.connect(user='advising_user', password='VLrMMJSScH6ZLHca', host='52.10.233.116', database='advising_db')
 	   db.close()
 	   varConnected = False;
-	except: "Error disconnecting from database."
+	except: 
+		print "Error disconnecting or login out from database."
+		varConnected = False;
 
 def get_param(prompt_string):
      stdscr.addstr(2, 2, prompt_string)
@@ -54,7 +52,7 @@ def get_param(prompt_string):
      input = stdscr.getstr(10, 10, 60)
      return input
 
-def setQMbottomMenu():
+def setQMbottomMenu():# Change the R to green, the Q to red, the Connected to green
 	stdscr.chgat(curses.LINES-1,7, 1, curses.A_BOLD | curses.color_pair(2))# the M
 	stdscr.chgat(curses.LINES-1,24, 1, curses.A_BOLD | curses.color_pair(1))# the Q
 
@@ -116,22 +114,16 @@ cli_window.noutrefresh()
 curses.doupdate()
 
 # *********   Create the event loop  ***************************************************************************************
-cli_text_window.clear()
-cli_text_window.refresh()
-
 
 while True:
 	c =  cli_window.getch()
-	
+	cli_text_window.clear()
+	cli_text_window.refresh()
 	if c == ord('m') or c == ord('M'):
 		cli_text_window.refresh()
 		cli_text_window.clear()
-		db = make_connection()
 		cli_text_window.addstr(action_menue, curses.color_pair(2))
-		#cli_text_window.chgat(curses.LINES-2,1, 1, curses.A_BOLD | curses.color_pair(2))
-		#message = "                               logged out";
 		stdscr.addstr(curses.LINES-1, 0, bottom_line)
-		# Change the R to green, the Q to red, the Connected to green
 		setQMbottomMenu()
 		
 	if c == ord('1'):
@@ -146,91 +138,104 @@ while True:
 		pswd1 = ''
 		pswd2 = ' '
 		counter = 0
+		adminPswd = "f739a6fb430139341721e5d011cfa671"
+		adminPwsdEntered = get_param("Enter the admin password to continue:" )
+		tempPwd = operation_secure(adminPwsdEntered)
+		cli_text_window.refresh()
+		cli_text_window.clear()
 
-		while addr1 != addr2:
-			addr1 = get_param("Enter your email address:" )
+		if tempPwd == adminPswd:
 			cli_text_window.refresh()
-			cli_text_window.clear()	
-			addr2 =  get_param("Re-enter your email address: " )
+			cli_text_window.clear()
+			while addr1 != addr2:
+				addr1 = get_param("Enter your email address:" )
+				cli_text_window.refresh()
+				cli_text_window.clear()	
+				addr2 =  get_param("Re-enter your email address: " )
+				cli_text_window.refresh()
+				cli_text_window.clear()	
+
+				if addr1 != addr2:
+				  cli_text_window.clear()
+				  cli_text_window.addstr("Email addresses must match!", curses.color_pair(1))
+				  cli_text_window.refresh()
+				  cli_text_window.clear()
+
+			if addr1 == addr2:
+			  cli_text_window.refresh()
+			  cli_window.box()
+			  cli_text_window.clear()
+			  cli_window.clear()
+
+			while pswd1 != pswd2:
+	                        
+	                        pswd1 = get_param("Enter your password:") 
+	                        cli_text_window.clear()	
+	                        cli_text_window.refresh()
+	                        pswd2 = get_param("Re-enter your password:")
+	                        cli_text_window.refresh()
+	                        cli_text_window.clear()
+	                        
+	                        if pswd1 != pswd2: 
+	                          cli_text_window.clear()
+			  	  cli_text_window.addstr("passwords must match!", curses.color_pair(1))
+				  cli_text_window.refresh()
+				  cli_text_window.clear()
+
+			if pswd1 == pswd2:
+			  cli_window.clear()
+			  cli_text_window.clear()
+			  cli_window.box()
+			  cli_text_window.refresh()
+			  # set echo and curser back to original
+			  curses.echo(0) 
+			  curses.curs_set(0)
+
+			# prepare the password for secure storage in the database by hashing and salting it.
+			tempPwd = operation_secure(pswd1)
+			#cli_text_window.addstr(tempPwd, curses.color_pair(1))
+
+			# make the db connection
+			db = make_connection()
+			cursor = db.cursor()# prepare a cursor object using cursor() method
+
+			# Prepare SQL query to INSERT a record into the database.
+			sql = "INSERT INTO User(Email, \
+			       password) \
+			       VALUES ('%s', '%s')" % \
+			       (addr1, tempPwd)
+			try:
+			   # Execute the SQL command
+			   cursor.execute(sql)
+			   # Commit your changes in the database-
+			   db.commit()
+			   disconnect(db)
+			   #db.close()
+			   varConnected = False;
+			   status =  "                                 logged-out";
+			   stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
+			   setQMbottomMenu()
+			   stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
+			   cli_text_window.addstr("Your information was stored sucessfully.", curses.color_pair(3))
+			except:
+			   # Rollback in case there is any error
+			   db.rollback()
+
+		elif tempPwd != adminPswd:
+			cli_window.box()
 			cli_text_window.refresh()
-			cli_text_window.clear()	
+			cli_text_window.clear()
+			cli_text_window.addstr("The password was not correct!", curses.color_pair(1))
+			curses.echo(0) 
+			curses.curs_set(0)
+			
 
-			if addr1 != addr2:
-			  cli_text_window.clear()
-			  cli_text_window.addstr("Email addresses must match!", curses.color_pair(1))
-			  cli_text_window.refresh()
-			  cli_text_window.clear()
-
-		if addr1 == addr2:
-		  cli_text_window.refresh()
-		  cli_window.box()
-		  cli_text_window.clear()
-		  cli_window.clear()
-
-		while pswd1 != pswd2:
-                        #cli_window.clear()
-                        #cli_text_window.clear()
-                        #cli_window.box()
-                        #cli_text_window.refresh()
-                        pswd1 = get_param("Enter your password:") 
-                        cli_text_window.clear()	
-                        cli_text_window.refresh()
-                        pswd2 = get_param("Re-enter your password:")
-                        cli_text_window.refresh()
-                        cli_text_window.clear()
-                        
-                        if pswd1 != pswd2: 
-                          cli_text_window.clear()
-		  	  cli_text_window.addstr("passwords must match!", curses.color_pair(1))
-			  cli_text_window.refresh()
-			  cli_text_window.clear()
-
-		if pswd1 == pswd2:
-		  cli_window.clear()
-		  cli_text_window.clear()
-		  cli_window.box()
-		  cli_text_window.refresh()
-		  # set echo and curser back to original
-		  curses.echo(0) 
-		  curses.curs_set(0)
-
-		# prepare the password for secure storage in the database by hashing and salting it.
-		tempPwd = operation_secure(pswd1)
-
-		# makd the db connection
-		db = MySQLdb.connect("52.10.233.116","advising_user", "VLrMMJSScH6ZLHca",  "advising_db")
-		cursor = db.cursor()# prepare a cursor object using cursor() method
-
-		# Prepare SQL query to INSERT a record into the database.
-		sql = "INSERT INTO User(Email, \
-		       password) \
-		       VALUES ('%s', '%s')" % \
-		       (addr1, tempPwd)
-		try:
-		   # Execute the SQL command
-		   cursor.execute(sql)
-		   # Commit your changes in the database-
-		   db.commit()
-		   db.close()
-		   varConnected = False;
-		   status =  "                                 logged-out";
-		   stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
-		   setQMbottomMenu()
-		   stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
-		   cli_text_window.addstr("Your information was stored sucessfully.", curses.color_pair(3))
-		except:
-		   # Rollback in case there is any error
-		   db.rollback()
-		
-
-	if c == ord('2'):
+	if c == ord('2'):# login
 		cli_text_window.refresh()
 		cli_text_window.clear()	
-		#cli_text_window.addstr("numbro dose", curses.color_pair(1))
 		curses.echo(1) 
 		curses.curs_set(1)
 		cli_text_window.refresh()
-
 		cli_text_window.clear()
 		email = get_param("Enter your email address.")
 		cli_text_window.refresh()
@@ -239,7 +244,7 @@ while True:
 		cli_text_window.clear()
 		cli_text_window.refresh()
 		# pull the latest email and password entered.
-		db = MySQLdb.connect("52.10.233.116","advising_user", "VLrMMJSScH6ZLHca",  "advising_db")
+		db = make_connection()
 		cursor = db.cursor()
 		sql = "SELECT * FROM User ORDER BY id DESC LIMIT 1"
 		try:
@@ -264,6 +269,7 @@ while True:
 		  stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
 		  cli_text_window.addstr("You have been logged in.", curses.color_pair(3))
 		else:
+		  disconnect(db)
 		  cli_window.clear()
 		  cli_text_window.clear()
 		  cli_window.box()
@@ -273,14 +279,10 @@ while True:
 		curses.echo(0) 
 		curses.curs_set(0)
 
-	if c == ord('3'):
+	if c == ord('3'):#logout
 		cli_text_window.refresh()
 		cli_text_window.clear()
-		try:
-			db.close()
-		except:
-			print "There was a log-out error."
-		varConnected = False;
+		disconnect(db)
 		status =  "                                 logged-out";
 		stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
 		stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
