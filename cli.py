@@ -7,7 +7,6 @@ import curses
 from urllib2 import urlopen
 from HTMLParser import HTMLParser
 from simplejson import loads
-#from json import loads
 import mysql.connector
 from mysql.connector import errorcode
 from os import system
@@ -45,6 +44,26 @@ def disconnect(db):
 		print "Error disconnecting or login out from database."
 		varConnected = False;
 
+# insert new user info
+def insertNewUsser(email, pswd):
+	db = make_connection()
+	cursor = db.cursor()
+	sql = "INSERT INTO User (Email, Password)\
+		VALUES('%s','%s')" %\
+		(email, pswd)
+	try:
+		cursor.execute(sql)
+		db.commit()
+		disconnect(db)
+		varConnected = False
+		status = "                                 logged-out";
+		stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
+		setQMbottomMenu()
+		stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
+	except:
+		db.rollback()
+		print"Error: Unable to insert data: "  + sql		
+
 def get_param(prompt_string):
      stdscr.addstr(2, 2, prompt_string)
      stdscr.clrtoeol()
@@ -63,6 +82,32 @@ def operation_secure(password):
 	pswd = hashlib.md5( salt + password + salt ).hexdigest()
 	return pswd
 
+#RETURNS ALL APPTS for a specified faculty email
+#->empty list if no references exist
+def GetAllAppts(db, FacultyEmail):
+    cursor = db.cursor()
+    sql = "SELECT * FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date ASC" %(FacultyEmail)
+
+    try:
+        cursor.execute(sql)
+        #create empty list
+        results=[]
+        if cursor.rowcount != 0:
+            catch = cursor.fetchall()
+            for r in catch:
+              #format time object
+              #source: stackoverflow.com/questions/904746/how-to-remove-all-characters-after-a-specific-character-in-python
+              STime = ':'.join(str(r[7]).split(':')[:-1])
+              ETime = ':'.join(str(r[8]).split(':')[:-1])
+              #results.append({"Id": str(r[0]), "FacultyName": r[1], "FacultyEmail": r[2], "StudentName":r[3],
+                  #"StudentEmail":r[4], "Date": r[5].strftime('%m/%d/%y'), "Status": r[6], "StartTime": STime, "EndTime": ETime}) 
+              results.append('Date: '+ str(r[5]) + '  Start time: ' + STime + '  End Time: '+ ETime + '  S Name: ' + str(r[3]) + ' S. Email: ' + str(r[4]) + '  Status: '+ str(r[6] ) )
+    except:
+        print"Error: Unable to fetch data: "  + sql
+        return
+
+    return results	
+
 # *********   Set up screens  ***************************************************************************************
 stdscr = curses.initscr()
 
@@ -76,9 +121,11 @@ if curses.has_colors():
 	curses.start_color()
 
 # Initiallizse the color combinations we're going to use
+#init_color(COLOR_YELLOW, 1000, 500, 0);
 curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
 curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
 curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
+curses.init_pair(4, curses.COLOR_CYAN, curses.COLOR_BLACK)
 
 # Begin Program 
 stdscr.addstr(" Advising Schedule Interface", curses.A_REVERSE) # what becomes the top bar
@@ -139,7 +186,9 @@ while True:
 		pswd2 = ' '
 		counter = 0
 		adminPswd = "f739a6fb430139341721e5d011cfa671"
+		curses.noecho()# temp turn off echo
 		adminPwsdEntered = get_param("Enter the admin password to continue:" )
+		curses.echo()
 		tempPwd = operation_secure(adminPwsdEntered)
 		cli_text_window.refresh()
 		cli_text_window.clear()
@@ -193,33 +242,11 @@ while True:
 
 			# prepare the password for secure storage in the database by hashing and salting it.
 			tempPwd = operation_secure(pswd1)
-			#cli_text_window.addstr(tempPwd, curses.color_pair(1))
-
-			# make the db connection
-			db = make_connection()
-			cursor = db.cursor()# prepare a cursor object using cursor() method
-
-			# Prepare SQL query to INSERT a record into the database.
-			sql = "INSERT INTO User(Email, \
-			       password) \
-			       VALUES ('%s', '%s')" % \
-			       (addr1, tempPwd)
 			try:
-			   # Execute the SQL command
-			   cursor.execute(sql)
-			   # Commit your changes in the database-
-			   db.commit()
-			   disconnect(db)
-			   #db.close()
-			   varConnected = False;
-			   status =  "                                 logged-out";
-			   stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
-			   setQMbottomMenu()
-			   stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
+			   insertNewUsser(addr1, tempPwd)
 			   cli_text_window.addstr("Your information was stored sucessfully.", curses.color_pair(3))
 			except:
-			   # Rollback in case there is any error
-			   db.rollback()
+			   cli_text_window.addstr("An unknown error ocurred when attempting to store your user info!", curses.color_pair(1))
 
 		elif tempPwd != adminPswd:
 			cli_window.box()
@@ -292,13 +319,46 @@ while True:
 	if c == ord('4'):
 		cli_text_window.refresh()
 		cli_text_window.clear()	
-		cli_text_window.addstr("numbro quatro", curses.color_pair(1))
+		if LoggedIn is False:
+			cli_text_window.addstr("You must log in first!", curses.color_pair(1))
+		else:
+			appts = GetAllAppts(db, email)
+			num = len(appts)
+			cli_text_window_pos = 1
+			cli_text_window.refresh()
+			cli_text_window.clear()
+			#http://stackoverflow.com/questions/14446311/make-curses-program-output-persist-in-terminal-scrollback-history-after-program
+			cli_text_window.keypad(True)
+			cli_text_window.refresh
+			height,width = cli_text_window.getmaxyx()
+			cli_text_window_height = height + 10
+			#cli_text_window = curses.newpad(cli_text_window_height, width)
+			cli_text_window.scrollok(True)
+			cli_text_window_pos = 0
+			#mypad_refresh = lambda: mypad.refresh(mypad_pos, 0, 0, 0, height -1, width)
+			cli_text_window.refresh
+			for index in range(num):
+				appts_str = str(appts[index])
+				cli_text_window.addstr(appts_str + '\n\n', curses.color_pair(3))
 
+			running = True
+		while running:
+			ch = cli_text_window.getch()
+			if ch == curses.KEY_DOWN and cli_text_window_pos < cli_text_window_height - height:
+				cli_text_window_pos += 1
+				cli_text_window.refresh()
+			elif ch == curses.KEY_UP and cli_text_window_pos > 0:
+				cli_text_window_pos -= 1
+				cli_text_window.refresh()
+			elif ch < 256 and chr(ch) == 'q':
+				running = False
+
+				
 	if c == ord('m') or c == ord('M'):
 		cli_text_window.refresh()
 		cli_text_window.clear()
 		make_connection()
-		cli_text_window.addstr(action_menue, curses.color_pair(2))
+		cli_text_window.addstr(action_menue, curses.color_pair(2) )
 	
 	if c == ord('E'):
 		q =-1
