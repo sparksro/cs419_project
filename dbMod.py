@@ -32,7 +32,7 @@ def disconnect(db):
 #->empty list if no references exist
 def GetAllAppts(db, FacultyEmail):
     cursor = db.cursor()
-    sql = "SELECT * FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC" %(FacultyEmail)
+    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC" %(FacultyEmail)
 
     try:
         cursor.execute(sql)
@@ -45,6 +45,7 @@ def GetAllAppts(db, FacultyEmail):
               #source: stackoverflow.com/questions/904746/how-to-remove-all-characters-after-a-specific-character-in-python
               STime = ':'.join(str(r[7]).split(':')[:-1])
               ETime = ':'.join(str(r[8]).split(':')[:-1])
+
               results.append({"Id": str(r[0]), "FacultyName": r[1], "FacultyEmail": r[2], "StudentName":r[3],
                   "StudentEmail":r[4], "Date": r[5].strftime('%m/%d/%y'), "Status": r[6], "StartTime": STime, "EndTime": ETime}) 
     except:
@@ -104,7 +105,7 @@ if db == 1:
 #Values to insert to DB
 #Must convert all emails to upper to bypass case-sensitive requests
 FacultyName = "Mr.T"
-FacultyEmail= "MrT@oregonstate.edu"
+FacultyEmail= "rob@test.com"
 StudentName = "JoeT"
 StudentEmail = "JoeT@oregonstate.edu"
 Date = "February 4, 2016"
@@ -121,8 +122,8 @@ Status = "Accepted"
 #DeleteAppt(db,ApptID)
 #UpdateAppt(db, Status, ApptID)
 
-#appts = GetAllAppts(db, FacultyEmail)
-#print appts
+appts = GetAllAppts(db, FacultyEmail)
+print appts
 
 disconnect(db)
 

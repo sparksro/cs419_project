@@ -86,7 +86,7 @@ def operation_secure(password):
 #->empty list if no references exist
 def GetAllAppts(db, FacultyEmail):
     cursor = db.cursor()
-    sql = "SELECT * FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date ASC" %(FacultyEmail)
+    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date ASC" %(FacultyEmail)
 
     try:
         cursor.execute(sql)
@@ -99,9 +99,9 @@ def GetAllAppts(db, FacultyEmail):
               #source: stackoverflow.com/questions/904746/how-to-remove-all-characters-after-a-specific-character-in-python
               STime = ':'.join(str(r[7]).split(':')[:-1])
               ETime = ':'.join(str(r[8]).split(':')[:-1])
-              #results.append({"Id": str(r[0]), "FacultyName": r[1], "FacultyEmail": r[2], "StudentName":r[3],
-                  #"StudentEmail":r[4], "Date": r[5].strftime('%m/%d/%y'), "Status": r[6], "StartTime": STime, "EndTime": ETime}) 
-              results.append('Date: '+ str(r[5]) + '  Start time: ' + STime + '  End Time: '+ ETime + '  S Name: ' + str(r[3]) + ' S. Email: ' + str(r[4]) + '  Status: '+ str(r[6] ) )
+
+              results.append({"Id": str(r[0]), "FacultyName": r[1], "FacultyEmail": r[2], "StudentName":r[3],"StudentEmail":r[4], "Date": r[5].strftime('%m/%d/%y'), "Status": r[6], "StartTime": STime, "EndTime": ETime}) 
+              #results.append('Date: '+ str(r[5]) + '  Start time: ' + STime + '  End Time: '+ ETime + '  S Name: ' + str(r[3]) + ' S. Email: ' + str(r[4]) + '  Status: '+ str(r[6] ) )
     except:
         print"Error: Unable to fetch data: "  + sql
         return
@@ -322,37 +322,48 @@ while True:
 		if LoggedIn is False:
 			cli_text_window.addstr("You must log in first!", curses.color_pair(1))
 		else:
+                        #get appointments
 			appts = GetAllAppts(db, email)
 			num = len(appts)
+
+                        #set parameters for pad window and instantiate new pad
 			cli_text_window_pos = 1
-			cli_text_window.refresh()
-			cli_text_window.clear()
-			#http://stackoverflow.com/questions/14446311/make-curses-program-output-persist-in-terminal-scrollback-history-after-program
-			cli_text_window.keypad(True)
-			cli_text_window.refresh
 			height,width = cli_text_window.getmaxyx()
 			cli_text_window_height = height + 10
-			#cli_text_window = curses.newpad(cli_text_window_height, width)
-			cli_text_window.scrollok(True)
-			cli_text_window_pos = 0
-			#mypad_refresh = lambda: mypad.refresh(mypad_pos, 0, 0, 0, height -1, width)
-			cli_text_window.refresh
-			for index in range(num):
-				appts_str = str(appts[index])
-				cli_text_window.addstr(appts_str + '\n\n', curses.color_pair(3))
+                        pad = curses.newpad(cli_text_window_height, width)
+                        pad_pos=0
+                        pad.keypad(True)
 
+                        #format appointment output
+                        pad.addstr('No.  Date \tBegin   End  Student\t\t Email\t\t Status\t\t\n')
+                        refNo = 1
+			for index in range(num):
+                                appts_str = str(refNo)
+                        	appts_str += '    '+str(appts[index].get("Date"))
+                                appts_str +='  '+str(appts[index].get("StartTime"))
+                                appts_str +='  '+str(appts[index].get("EndTime"))
+                                appts_str +='  '+str(appts[index].get("StudentName"))
+                                appts_str +='\t'+str(appts[index].get("StudentEmail"))
+                                appts_str +='\t'+str(appts[index].get("Status"))
+				pad.addstr(appts_str + '\n\n', curses.color_pair(3))
+                                refNo+=1
 			running = True
 		while running:
-			ch = cli_text_window.getch()
+                        #get window size to readjust as needed
+			height,width = cli_text_window.getmaxyx()
+			cli_text_window_height = height + 10
+                        pad.refresh(pad_pos,0,5,5,cli_text_window_height-10, width-5)
+			ch = pad.getch()
 			if ch == curses.KEY_DOWN and cli_text_window_pos < cli_text_window_height - height:
-				cli_text_window_pos += 1
-				cli_text_window.refresh()
+				pad_pos += 1
+                                pad.refresh(pad_pos,0,5,5,cli_text_window_height-15, width-5)
 			elif ch == curses.KEY_UP and cli_text_window_pos > 0:
-				cli_text_window_pos -= 1
-				cli_text_window.refresh()
+				pad_pos -= 1
+                                pad.refresh(pad_pos,0,5,5,cli_text_window_height-15, width-5)
 			elif ch < 256 and chr(ch) == 'q':
 				running = False
-
+		        
+                        
 				
 	if c == ord('m') or c == ord('M'):
 		cli_text_window.refresh()
