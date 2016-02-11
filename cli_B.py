@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 # Advising Schedule Interface 
-# version 1.10
+# version 1.25
+# Authors:  Rob Sparks, Susan Lee
 
 import curses
 from urllib2 import urlopen
@@ -108,7 +109,7 @@ def operation_secure(password):
 #->empty list if no references exist
 def GetAllAppts(db, FacultyEmail ):
     cursor = db.cursor()
-    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC LIMIT 50 " %(FacultyEmail)
+    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC LIMIT 75 " %(FacultyEmail)
 
     try:
         cursor.execute(sql)
@@ -361,8 +362,6 @@ while True:
 		message = ''
 		current_val = -2  # the number we are currently on. Initial set to -2 to print a dirrections prompt
 		current_id = -5
-		#min_val = -1
-		#max_val = 50 #this determins the max number of appontments it will upload
 		first_run = True
 
 		if LoggedIn is False:
@@ -493,7 +492,7 @@ while True:
 
 # Restore the terminal settings
 curses.nocbreak()
-#stdscr.keypad(0)
+stdscr.keypad(0)
 curses.echo()
 curses.curs_set(1)
 
