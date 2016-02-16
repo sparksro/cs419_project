@@ -297,19 +297,13 @@ while True:
 		email = get_param("Enter your email address.",0)
 		cli_text_window.refresh()
 		cli_text_window.clear()
-		curses.noecho()# temp turn off echo so the pwd does not appear on the screen
 		pswd = get_param("Enter your password.",0)
-		curses.echo()# temp turn echo back on
+		cli_text_window.clear()
 		cli_text_window.refresh()
 		# pull the latest email and password entered.
 		db = make_connection()
 		cursor = db.cursor()
-
-		# TO DO: change the querry to allow mult users with addition of where email...
-		# But this may open up some security concerns. -We need to think about a sollution.
-
 		sql = "SELECT * FROM User ORDER BY id DESC LIMIT 1"
-
 		try:
 		   cursor.execute(sql)
 		   results = cursor.fetchall()
@@ -377,93 +371,91 @@ while True:
 			appts = GetAllAppts(db, email)
 			num = len(appts)
 			
-			if num > 0:
-				if current_val == -2: 
-					message = "View Appointments:  \nMost recient entry is displayed first. \nHit up arrow ^ to continue \n"
+			if current_val == -2: 
+				message = "View Appointments:  \nMost recient entry is displayed first. \nHit up arrow ^ to continue \n"
 			
-				running = True
-				reSetScreens(bottom_line2, status2, menu)
+			running = True
+			reSetScreens(bottom_line2, status2, menu)
 			
-				while running:
-					c2 = cli_text_window.getch()
+			while running:
+				c2 = cli_text_window.getch()
 
-					if c2 == curses.KEY_UP:# key up
-						cli_text_window.refresh()
-						cli_text_window.clear()
-						#cli_text_window.addstr("key up", curses.color_pair(1))
-						if first_run is True:
-							current_val = -1
-							first_run = False
-							message = ''
-						current_id = -5 # database key id of the current viewed appointment
-						current_val += 1
+				if c2 == curses.KEY_UP:# key up
+					cli_text_window.refresh()
+					cli_text_window.clear()
+					#cli_text_window.addstr("key up", curses.color_pair(1))
+					if first_run is True:
+						current_val = -1
+						first_run = False
 						message = ''
-						cli_text_window.refresh()
-						cli_text_window.clear()
-						if current_val > num-1:
-								current_val = num
-								cli_text_window.addstr("End of entries reached.", curses.color_pair(1))
+					current_id = -5 # database key id of the current viewed appointment
+					current_val += 1
+					message = ''
+					cli_text_window.refresh()
+					cli_text_window.clear()
+					if current_val > num-1:
+							current_val = num
+							cli_text_window.addstr("End of entries reached.", curses.color_pair(1))
 							
-						elif current_val <= num-1:
-							current_id = appt_print(appts, current_val)
+					elif current_val <= num-1:
+						current_id = appt_print(appts, current_val)
 									
 
-					elif c2 == curses.KEY_DOWN: #key down
+				elif c2 == curses.KEY_DOWN: #key down
+					cli_text_window.refresh()
+					cli_text_window.clear()
+					if first_run is True:
+						cli_text_window.addstr("Please use up arrow", curses.color_pair(1))
+						current_val = -2
+						
+					elif current_val >= 0:
+						if current_val > 0:
+							current_val -= 1
+						message = ''
+						current_id = appt_print(appts, current_val)
+
+				elif c2 == ord('c') or c2 == ord('C'):
+					confirmation = get_param("C to confirm or any other key to cancel. Followed with Enter:" ,2)
+					if confirmation == 'c' or confirmation == 'C':
+						confirmation = ''
+						message = ''
+						#status = 'Pending' # just for testingx
+						status = 'Instructor-canceled'
+						cursor = db.cursor()
+
+						try:	
+							cursor.execute(""" UPDATE Appointment SET Status=%s WHERE Id=%s """,(status, current_id) )
+							db.commit()
+							cli_text_window.addstr("\n Status Changed.", curses.color_pair(1))
+						except:
+							cli_text_window.addstr("Database update error.", curses.color_pair(1))
+
+				# TO DO ***insert email code  ***.
+						
+						appts = GetAllAppts(db, email)
 						cli_text_window.refresh()
 						cli_text_window.clear()
-						if first_run is True:
-							cli_text_window.addstr("Please use up arrow", curses.color_pair(1))
-							current_val = -2
+						time.sleep(1.25)
+						reSetScreens(bottom_line2, status2, menu)
+						appt_print(appts, current_val)
 						
-						elif current_val >= 0:
-							if current_val > 0:
-								current_val -= 1
-							message = ''
-							current_id = appt_print(appts, current_val)
-
-					elif c2 == ord('c') or c2 == ord('C'):
-						confirmation = get_param("C to confirm or any other key to cancel. Followed with Enter:" ,2)
-						if confirmation == 'c' or confirmation == 'C':
-							confirmation = ''
-							message = ''
-							#status = 'Pending' # just for testingx
-							status = 'Instructor-canceled'
-							cursor = db.cursor()
-
-							try:	
-								cursor.execute(""" UPDATE Appointment SET Status=%s WHERE Id=%s """,(status, current_id) )
-								db.commit()
-								cli_text_window.addstr("\n Status Changed.", curses.color_pair(1))
-							except:
-								cli_text_window.addstr("Database update error.", curses.color_pair(1))
-
-					# TO DO ***insert email code  ***.
+					elif confirmation != 'c' or confirmation != 'C':
+						cli_text_window.addstr("\n Canceled.", curses.color_pair(1))
+						cli_text_window.refresh()
+						cli_text_window.clear()
+						time.sleep(.90)
+						reSetScreens(bottom_line2, status2, menu)
+						appt_print(appts, current_val)	
 						
-							appts = GetAllAppts(db, email)
-							cli_text_window.refresh()
-							cli_text_window.clear()
-							time.sleep(1.25)
-							reSetScreens(bottom_line2, status2, menu)
-							appt_print(appts, current_val)
-						
-						elif confirmation != 'c' or confirmation != 'C':
-							cli_text_window.addstr("\n Canceled.", curses.color_pair(1))
-							cli_text_window.refresh()
-							cli_text_window.clear()
-							time.sleep(.90)
-							reSetScreens(bottom_line2, status2, menu)
-							appt_print(appts, current_val)	
-						
-					elif c2 == ord('x') or c2 == ord('X'):
-						running = False
-						menu = 1
-						message = ''
-						reSetScreens(bottom_line, status, menu)
-				  		c = ord('M')
+				elif c2 == ord('x') or c2 == ord('X'):
+					running = False
+					menu = 1
+					message = ''
+					reSetScreens(bottom_line, status, menu)
+			  		c = ord('M')
 					
-				 	c2 = '' #prevents infinite looping in the menue
-			else:
-				cli_text_window.addstr("There was an error or you have no appointments in the database!.", curses.color_pair(1))	                        
+			 	c2 = '' #prevents infinite looping in the menue
+		 	                        
 	
 	if c == ord('e') or c == ord('E'):
 		q =-1
