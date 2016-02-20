@@ -26,6 +26,14 @@ bottom_line3 = "Press UP or DOWN, No. to select an appt, X to drop out to main m
 status =  "                                 logged-out";
 status2 =  "logged-out";
 
+# ****  Email Settings *****************
+# These setting need to updated to instructor's email 
+fromaddr = 'procmailtestscs@gmail.com'
+toaddr  = 'procmailtestscs@gmail.com'
+username = 'procmailtestscs'
+password = 'gobeavers!'
+#***************************************
+
 
 # *********   Functions  ***************************************************************************************
 def make_connection():
@@ -226,49 +234,63 @@ def getSpecificID(appt):
         c2 = cli_text_window.getch()
 
         if c2 == ord('c') or c2 == ord('C'):
-                confirmation = get_param("C to confirm or any other key to cancel. Followed with Enter:" ,2)
-                if confirmation == 'c' or confirmation == 'C':
-                        confirmation = ''
-                        message = ''
-                        #status = 'Pending' # just for testingx
-                        status = 'Pending Cancellation'
-                        cursor = db.cursor()
-
-                        try:	
-                                cursor.execute(""" UPDATE Appointment SET Status=%s WHERE Id=%s """,(status, current_id) )
-                                db.commit()
-                                cli_text_window.addstr("\n Status Changed.", curses.color_pair(1))
-                        except:
-                                cli_text_window.addstr("Database update error.", curses.color_pair(1))
-
-        # TO DO ***insert email code  ***.
-                
-                        #get udpated appt info
-                        appt = GetAppt(db, current_id)
-                        cli_text_window.refresh()
-                        cli_text_window.clear()
-                        time.sleep(1.25)
-                        reSetScreens(bottom_line2, status2, menu)
-                        appt_print(appt)
-                
-                elif confirmation != 'c' or confirmation != 'C':
-                        cli_text_window.addstr("\n Canceled.", curses.color_pair(1))
-                        cli_text_window.refresh()
-                        cli_text_window.clear()
-                        time.sleep(.90)
-                        reSetScreens(bottom_line2, status2, menu)
-                        appt_print(appt)	
-                
-        elif c2 == ord('x') or c2 == ord('X'):
-                running = False
-                menu = 3 
+            confirmation = get_param("C to confirm or any other key to cancel. Followed with Enter:" ,2)
+            if confirmation == 'c' or confirmation == 'C':
+                confirmation = ''
                 message = ''
+                #status = 'Pending' # just for testingx
+                status = 'Pending Cancellation'
+                cursor = db.cursor()
+
+                try:	
+                        cursor.execute(""" UPDATE Appointment SET Status=%s WHERE Id=%s """,(status, current_id) )
+                        db.commit()
+                        cli_text_window.addstr("\n Status Changed.", curses.color_pair(1))
+                except:
+                        cli_text_window.addstr("Database update error.", curses.color_pair(1))
+
+                #send cancellation email
+                sendemail(current_id)
+                #get udpated appt info
+                appt = GetAppt(db, current_id)
                 cli_text_window.refresh()
                 cli_text_window.clear()
-                reSetScreens(bottom_line3, status2, menu)
+                time.sleep(1.25)
+                reSetScreens(bottom_line2, status2, menu)
+                appt_print(appt)
+            
+            elif confirmation != 'c' or confirmation != 'C':
+                cli_text_window.addstr("\n Canceled.", curses.color_pair(1))
+                cli_text_window.refresh()
+                cli_text_window.clear()
+                time.sleep(.90)
+                reSetScreens(bottom_line2, status2, menu)
+                appt_print(appt)	
+                
+        elif c2 == ord('x') or c2 == ord('X'):
+            running = False
+            menu = 3 
+            message = ''
+            cli_text_window.refresh()
+            cli_text_window.clear()
+            reSetScreens(bottom_line3, status2, menu)
         
         c2 = '' #prevents infinite looping in the menue
            
+def sendemail (apptId):
+    # Create a text/plain message
+    message = MIMEText(apptId)
+    message['Subject'] = "Advising Signup Cancellation"
+    message['From'] = fromaddr 
+    message['To'] = toaddr
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo()
+    server.starttls()
+    server.login(username,password)
+    server.sendmail(fromaddr, toaddr, message.as_string())
+    server.quit()
+
 # *********   Set up screens  ***************************************************************************************
 # Begin Program and set initial screen
 stdscr = curses.initscr()
