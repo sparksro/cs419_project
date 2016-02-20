@@ -16,10 +16,13 @@ import MySQLdb
 import hashlib
 import smtplib
 from email.mime.text import MIMEText
+import string
+import random
+import datetime as date
 
 LoggedIn = False;
-action_menu = "Enter the number to perform the action.\n---------------------------------------\n1. Store your email account info in the database \n2. Login\n"
-logged_menu = "Enter the number to perform the action.\n---------------------------------------\n1. Logout\n2. View Advising Schedule"
+action_menu = "Enter the number to perform the action.\n---------------------------------------\n1. Register \n2. Login \n3. Forgot Password"
+logged_menu = "Enter the number to perform the action.\n---------------------------------------\n1. View Advising Schedule \n2. Change Password \n3. Logout"
 bottom_line = "Press 'M' to see Menu. 'Q' to quit."
 bottom_line2 = "Press UP or DOWN arrow, X to drop out to appt list, C to cancel apt."
 bottom_line3 = "Press UP or DOWN, No. to select an appt, X to drop out to main menu."
@@ -65,11 +68,36 @@ def insertNewUsser(email, pswd):
 	try:
 		cursor.execute(sql)
 		db.commit()
-		cli_text_window.addstr("Your information was stored sucessfully.", curses.color_pair(3))
 		disconnect(db)
 	except:
 		db.rollback()
 		cli_text_window.addstr("An unknown error ocurred when attempting to store your user info!", curses.color_pair(1))		
+#update user password 
+def updatePassword(email, update):
+    db = make_connection()
+    cursor = db.cursor()
+    sql = "UPDATE User SET Password = '%s' WHERE Email= '%s'" %(update, email)
+    try:
+            cursor.execute(sql)
+            db.commit()
+            cli_text_window.addstr("Your information was stored sucessfully.", curses.color_pair(3))
+            disconnect(db)
+    except:
+            db.rollback()
+            cli_text_window.addstr("An unknown error ocurred when attempting to store your user info!", curses.color_pair(1))		
+
+#update user last modified date 
+def updateDate(email, update):
+    db = make_connection()
+    cursor = db.cursor()
+    sql = "UPDATE User SET lastModifiedDate = '%s' WHERE Email= '%s'" %(update, email)
+    try:
+            cursor.execute(sql)
+            db.commit()
+            disconnect(db)
+    except:
+            db.rollback()
+            cli_text_window.addstr("An unknown error ocurred when attempting to store your user info!", curses.color_pair(1))		
 
 def get_param(prompt_string, colorPair):
     stdscr.addstr(2, 2, prompt_string, curses.color_pair(colorPair))
@@ -123,6 +151,35 @@ def operation_secure(password):
     pswd = hashlib.md5( salt + password + salt ).hexdigest()
     return pswd
 
+def changePassword():
+    cli_text_window.refresh()
+    cli_text_window.clear()
+    newPwd1=''
+    newPwd2=' '
+    curses.noecho()# temp turn off echo so the pwd does not appear on the screen
+    while newPwd1 != newPwd2:
+        newPwd1 = get_param("Enter your new password.",0)
+        cli_text_window.clear()
+        cli_text_window.refresh()
+        newPwd2 = get_param("Re-enter your new password.",0)
+        cli_text_window.refresh()
+        cli_text_window.clear()
+
+        if newPwd1 != newPwd2:
+            cli_text_window.clear()
+            cli_text_window.addstr("passwords must match!", curses.color_pair(1))
+            cli_text_window.refresh()
+            cli_text_window.clear()
+    
+    if newPwd1 == newPwd2:
+        cli_window.clear()
+        cli_text_window.clear()
+        cli_window.box()
+        cli_text_window.refresh()
+        curses.echo()
+        curses.curs_set(0)
+        tempPwd = operation_secure(newPwd1)
+        updatePassword(email, tempPwd)
 #RETURNS ALL APPTS for a specified faculty email
 #->empty list if no references exist
 def GetAllAppts(db, FacultyEmail ):
@@ -251,7 +308,8 @@ def getSpecificID(appt):
                         cli_text_window.addstr("Database update error.", curses.color_pair(1))
 
                 #send cancellation email
-                sendemail(current_id)
+                subject = "Advising Signup Cancellation"
+                sendEmail(current_id, subject)
                 #get udpated appt info
                 appt = GetAppt(db, current_id)
                 cli_text_window.refresh()
@@ -278,10 +336,10 @@ def getSpecificID(appt):
         
         c2 = '' #prevents infinite looping in the menue
            
-def sendemail (apptId):
+def sendEmail (msg, subject):
     # Create a text/plain message
-    message = MIMEText(apptId)
-    message['Subject'] = "Advising Signup Cancellation"
+    message = MIMEText(msg)
+    message['Subject'] = subject
     message['From'] = fromaddr 
     message['To'] = toaddr
 
@@ -291,6 +349,11 @@ def sendemail (apptId):
     server.login(username,password)
     server.sendmail(fromaddr, toaddr, message.as_string())
     server.quit()
+
+#random temporary password generator
+#sourced from stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
+def randomGenerator(size=10, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
 
 # *********   Set up screens  ***************************************************************************************
 # Begin Program and set initial screen
@@ -359,76 +422,25 @@ while True:
             cli_text_window.clear()
             
             addr1 = ''
-            addr2 = ' '
-            message = ''
             pswd1 = ''
-            pswd2 = ' '
-            counter = 0
-            adminPswd = "f739a6fb430139341721e5d011cfa671"
-            curses.noecho()# temp turn off echo so the pwd does not appear on the screen
-            adminPwsdEntered = get_param("Enter the admin password to continue:" ,0)
-            curses.echo()
-            tempPwd = operation_secure(adminPwsdEntered)
-            cli_text_window.refresh()
+            addr1 = get_param("Enter your email address:",0)
             cli_text_window.clear()
+            cli_text_window.refresh()
+            
+            #send email with temp password
+            tempPwd = randomGenerator()
+            subject = "Appointment CLI New User"
+            sendEmail(tempPwd, subject)
+            # prepare the password for secure storage in the database by hashing and salting it.
+            saltedPwd = operation_secure(tempPwd)
+            insertNewUsser(addr1, saltedPwd)
 
-            if tempPwd == adminPswd:
-                cli_text_window.refresh()
-                cli_text_window.clear()
-                while addr1 != addr2:
-                    addr1 = get_param("Enter your email address:" ,0)
-                    cli_text_window.refresh()
-                    cli_text_window.clear()	
-                    addr2 =  get_param("Re-enter your email address: " ,0)
-                    cli_text_window.refresh()
-                    cli_text_window.clear()	
-
-                    if addr1 != addr2:
-                        cli_text_window.clear()
-                        cli_text_window.addstr("Email addresses must match!", curses.color_pair(1))
-                        cli_text_window.refresh()
-                        cli_text_window.clear()
-
-                if addr1 == addr2:
-                    cli_text_window.refresh()
-                    cli_window.box()
-                    cli_text_window.clear()
-                    cli_window.clear()
-
-                while pswd1 != pswd2:
-                    pswd1 = get_param("Enter your password:",0) 
-                    cli_text_window.clear()	
-                    cli_text_window.refresh()
-                    pswd2 = get_param("Re-enter your password:",0)
-                    cli_text_window.refresh()
-                    cli_text_window.clear()
-                    
-                    if pswd1 != pswd2: 
-                        cli_text_window.clear()
-                        cli_text_window.addstr("passwords must match!", curses.color_pair(1))
-                        cli_text_window.refresh()
-                        cli_text_window.clear()
-
-                if pswd1 == pswd2:
-                    cli_window.clear()
-                    cli_text_window.clear()
-                    cli_window.box()
-                    cli_text_window.refresh()
-                    # set echo and curser back to original
-                    curses.echo(0) 
-                    curses.curs_set(0)
-
-                # prepare the password for secure storage in the database by hashing and salting it.
-                tempPwd = operation_secure(pswd1)
-                insertNewUsser(addr1, tempPwd)
-
-            elif tempPwd != adminPswd:
-                cli_window.box()
-                cli_text_window.refresh()
-                cli_text_window.clear()
-                cli_text_window.addstr("The password was not correct!", curses.color_pair(1))
-                curses.echo(0) 
-                curses.curs_set(0)
+            cli_text_window.refresh()
+            cli_text_window.clear()	
+            cli_window.box()
+            cli_text_window.refresh()
+            cli_text_window.addstr("A temporary password has been sent to your email address.\n")
+            cli_text_window.addstr("Check your email, then return to login page to sign in.")
                         
 
         if c == ord('2'):# login
@@ -449,67 +461,89 @@ while True:
             db = make_connection()
             cursor = db.cursor()
 
-            # TO DO: change the querry to allow mult users with addition of where email...
-            # But this may open up some security concerns. -We need to think about a sollution.
-
-            sql = "SELECT * FROM User ORDER BY id DESC LIMIT 1"
+            sql = "SELECT * FROM User WHERE Email = '%s' ORDER BY id DESC LIMIT 1" %(email)
 
             try:
                 cursor.execute(sql)
-                results = cursor.fetchall()
-                for row in results:
-                    stored_email = row[1]
-                    stored_password = row[2]
-                    secured_pswd = operation_secure(pswd)
+                if cursor.rowcount == 0:
+                    cli_window.clear()
+                    cli_text_window.clear()
+                    cli_window.box()
+                    cli_text_window.refresh()
+                    cli_text_window.addstr("No user in database", curses.color_pair(1))
+                else:
+                    results = cursor.fetchall()
+                    for row in results:
+                        stored_email = row[1]
+                        stored_password = row[2]
+                        lastModified = row[3]
+                        secured_pswd = operation_secure(pswd)
+                    if secured_pswd == stored_password and email == stored_email:
+                        LoggedIn = True;
+                        status =  "                                  logged-in";#idfferent spacing versions used in different cases
+                        status2 =  " logged-in";
+                        cli_window.clear()
+                        cli_text_window.clear()
+                        cli_window.box()
+                        cli_text_window.refresh()
+                        if lastModified is None:
+                            cli_text_window.addstr("You must change your password", curses.color_pair(1))
+                            changePassword()
+                            updateDate(email, date.datetime.today())
+                        else:
+                            stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
+                            setBottomMenu(bottom_line, status, menu)
+                            stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
+                            cli_text_window.addstr("You have been logged in.", curses.color_pair(3))
+                    else:
+                        disconnect(db)
+                        cli_window.clear()
+                        cli_text_window.clear()
+                        cli_window.box()
+                        cli_text_window.refresh()
+                        cli_text_window.addstr("Your email or password did not match -try again!.", curses.color_pair(1))
+                    # set echo and curser back to original
+                    curses.echo(0) 
+                    curses.curs_set(0)
             except:
                 print"Error: Unable to fetch data."
             
-            if secured_pswd == stored_password and email == stored_email:
-                LoggedIn = True;
-                status =  "                                  logged-in";#idfferent spacing versions used in different cases
-                status2 =  " logged-in";
-                cli_window.clear()
-                cli_text_window.clear()
-                cli_window.box()
-                cli_text_window.refresh()
-                stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
-                setBottomMenu(bottom_line, status, menu)
-                stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
-                cli_text_window.addstr("You have been logged in.", curses.color_pair(3))
-                time.sleep(.03)
-                c = ord('M')
-            else:
-                disconnect(db)
-                cli_window.clear()
-                cli_text_window.clear()
-                cli_window.box()
-                cli_text_window.refresh()
-                cli_text_window.addstr("Your email or password did not match -try again!.", curses.color_pair(1))
-                time.sleep(.03)
-                c = ord('M')
-            # set echo and curser back to original
-            curses.echo(0) 
-            curses.curs_set(0)
+        
+        if c == ord('3'):#forgotten password
+            curses.echo(1) 
+            curses.curs_set(1)
+            cli_text_window.refresh()
+            cli_text_window.clear()
+            
+            addr1 = ''
+            pswd1 = ''
+            addr1 = get_param("Enter your email address:",0)
+            cli_text_window.clear()
+            cli_text_window.refresh()
+            
+            #send email with temp password
+            tempPwd = randomGenerator()
+            subject = "Appointment CLI Password Reset"
+            sendEmail(tempPwd, subject)
+            # prepare the password for secure storage in the database by hashing and salting it.
+            saltedPwd = operation_secure(tempPwd)
+            updatePassword(addr1, saltedPwd)
+            updateDate(addr1, None)
+
+            cli_text_window.refresh()
+            cli_text_window.clear()	
+            cli_window.box()
+            cli_text_window.refresh()
+            cli_text_window.addstr("A temporary password has been sent to your email address.\n")
+            cli_text_window.addstr("Check your email, then return to login page.")
     else:
         if c == ord('m') or c == ord('M'):
             cli_text_window.refresh()
             cli_text_window.clear()
             cli_text_window.addstr(logged_menu, curses.color_pair(2))
             setBottomMenu(bottom_line, status, menu)
-        if c == ord('1'):#logout
-            cli_text_window.refresh()
-            cli_text_window.clear()
-            try:
-                disconnect(db)
-                status =  "                                 logged-out";
-                LoggedIn = False;
-                setBottomMenu(bottom_line, status, menu)
-                cli_text_window.addstr("You have been logged out.", curses.color_pair(3))
-            except:
-                cli_text_window.addstr("You must be logged in to log out!.", curses.color_pair(1))
-            
 
-        if c == ord('2'):
+        if c == ord('1'):
             cli_text_window.refresh()
             cli_text_window.clear()
             cli_text_window.keypad(1)
@@ -572,9 +606,61 @@ while True:
                             cli_text_window.refresh()
                             cli_text_window.clear()
                             reSetScreens(bottom_line, status2, menu)
+                        else:
+                            cli_text_window.addstr("Not a valid option, try again\n", curses.color_pair(1))
                             
                 else:
                     cli_text_window.addstr("There was an error or you have no appointments in the database!.", curses.color_pair(1))	                        
+        if c == ord('2'):# change password
+            secured_pswd = ''
+            stored_password = ' '
+            cli_text_window.refresh()
+            cli_text_window.clear()	
+            while secured_pswd != stored_password:
+                curses.curs_set(1)
+                curses.noecho()# temp turn off echo so the pwd does not appear on the screen
+                pswd = get_param("Enter your current password.",0)
+                curses.echo()# temp turn echo back on
+                cli_text_window.refresh()
+                # pull the latest email and password entered.
+                db = make_connection()
+                cursor = db.cursor()
+
+                sql = "SELECT * FROM User WHERE Email = '%s' ORDER BY id DESC LIMIT 1" %(email)
+
+                try:
+                    cursor.execute(sql)
+                    results = cursor.fetchall()
+                    for row in results:
+                        stored_email = row[1]
+                        stored_password = row[2]
+                        secured_pswd = operation_secure(pswd)
+                except:
+                    print"Error: Unable to fetch data."
+
+                if secured_pswd != stored_password:
+                    cli_text_window.clear()
+                    cli_text_window.addstr("Password did not match, try again.", curses.color_pair(3))
+                    cli_text_window.refresh()
+                    cli_text_window.clear()
+            if secured_pswd == stored_password:
+                changePassword()
+            else:
+                cli_text_window.addstr("Your password did not match.", curses.color_pair(3))
+
+        if c == ord('3'):#logout
+            cli_text_window.refresh()
+            cli_text_window.clear()
+            try:
+                disconnect(db)
+                status =  "                                 logged-out";
+                LoggedIn = False;
+                setBottomMenu(bottom_line, status, menu)
+                cli_text_window.addstr("You have been logged out.", curses.color_pair(3))
+            except:
+                cli_text_window.addstr("You must be logged in to log out!.", curses.color_pair(1))
+            
+
     
     if c == ord('e') or c == ord('E'):
         q =-1
