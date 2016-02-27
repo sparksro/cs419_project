@@ -24,8 +24,8 @@ LoggedIn = False;
 action_menu = "Enter the number to perform the action.\n---------------------------------------\n1. Register \n2. Login \n3. Forgot Password"
 logged_menu = "Enter the number to perform the action.\n---------------------------------------\n1. View Advising Schedule \n2. Change Password \n3. Logout"
 bottom_line = "Press 'M' to see Menu. 'Q' to quit."
-bottom_line2 = "Press UP or DOWN arrow, X to drop out to appt list, C to cancel apt."
-bottom_line3 = "Press UP or DOWN, No. to select an appt, X to drop out to main menu."
+bottom_line2 = "Press UP or DOWN, No. to select an appt, X to drop out to main menu."
+bottom_line3 = "Press X to drop out to appt list, C to cancel apt."
 #varConnected = False;
 status =  "                                 logged-out";
 status2 =  "logged-out";
@@ -72,6 +72,7 @@ def insertNewUsser(email, pswd):
 	except:
 		db.rollback()
 		cli_text_window.addstr("An unknown error ocurred when attempting to store your user info!", curses.color_pair(1))		
+
 #update user password 
 def updatePassword(email, update):
     db = make_connection()
@@ -241,7 +242,7 @@ def appt_summary(appts, summaryIndex): #prints the currently selected appointmen
     cli_text_window.addstr("***************** ")
     cli_text_window.addstr("Appointments Summary, pg " + str(page), curses.color_pair(3))
     cli_text_window.addstr(" ****************\n\n")
-    cli_text_window.addstr('No.  Date \tBegin   End  Student  Status\t\t\n', curses.color_pair(3))
+    cli_text_window.addstr('No.  Date      Begin  End    Student    Status\t\t\n', curses.color_pair(3))
     refNo = 1 
     apptId ={} 
     
@@ -254,11 +255,11 @@ def appt_summary(appts, summaryIndex): #prints the currently selected appointmen
         appts_str +='  '+str(appts[index].get("EndTime"))
         appts_str +='  '+str(appts[index].get("StudentName"))
         appts_str +='\t'+str(appts[index].get("Status"))
-        cli_text_window.addstr(appts_str + ' ' + str(refNo) + '\n\n')
+        cli_text_window.addstr(appts_str + '\n\n')
         apptId[str(refNo)] = appts[index].get("Id")
         refNo+=1
-    return apptId
-    #return (apptId, refNo)
+    #return apptId
+    return (apptId, refNo)
     
 def appt_print(appt): #prints the currently selected appointment and returns its id     
     cli_text_window.refresh()
@@ -551,7 +552,7 @@ while True:
             cli_text_window.refresh()
             cli_text_window.clear()
             cli_text_window.keypad(1)
-            menu = 3 
+            menu = 2 
             message = ''
 
             if LoggedIn is False:
@@ -560,17 +561,20 @@ while True:
                 #get appointments
                 appts = GetAllAppts(db, email)
                 num = len(appts)
-                
+                appts_number = 0# number of appointments in the summary screen 
+
                 if num > 0:
                     running = True
-                    reSetScreens(bottom_line3, status2, menu)
+                    reSetScreens(bottom_line2, status2, menu)
                     #show first 5 appointments
                     summaryIndex = 0 
                     endSummary = False
-                    apptIds = appt_summary(appts, summaryIndex)
+                    
+                    apptIds, appts_number = appt_summary(appts, summaryIndex)
                     while running:
                         c2 = cli_text_window.getch()
-                        if c2 == curses.KEY_DOWN:
+                        
+                        if c2 == curses.KEY_DOWN: 
                             cli_text_window.refresh()
                             cli_text_window.clear()
                             if summaryIndex+5 > num-1:
@@ -578,7 +582,8 @@ while True:
                                 cli_text_window.addstr("End of summary reached.", curses.color_pair(1))
                             else:
                                 summaryIndex += 5
-                                apptIds = appt_summary(appts, summaryIndex)
+                                apptIds, appts_number = appt_summary(appts, summaryIndex)
+                                #appts_number -= 1 #used to keep user entered number menu from over indexing and producing an error
                         
                         elif c2 == curses.KEY_UP:
                             #if keying up from End of summary prompt, then reset summaryIndex to view last page
@@ -589,24 +594,27 @@ while True:
                                 cli_text_window.refresh()
                                 cli_text_window.clear()
                                 summaryIndex -= 5
-                                apptIds = appt_summary(appts, summaryIndex)
+                                apptIds, appts_number = appt_summary(appts, summaryIndex)
+                                #appts_number -= 1 #used to keep next menu item from over indexing and producing an error
                         
                         # Gets user appointment number input from Appointments status menu
                         elif c2 == ord('1') or c2 == ord('2') or c2 == ord('3') or c2 == ord('4') or c2 == ord('5'):
-                            cli_text_window.refresh()
-                            cli_text_window.clear()
-                            
-                            #refNo
-                            apptId = apptIds[chr(c2)]  
-
-                            #get info for this appt only
-                            appt = GetAppt(db, apptId)
-                            #display appt, and give cancellation options
-                            getSpecificID(appt)
-                            #get updated appointment info 
-                            appts = GetAllAppts(db, email)
-                            apptIds = appt_summary(appts, summaryIndex)
-                        
+                            menu = 3
+                            reSetScreens(bottom_line3, status2, menu)
+                            if( int(chr(c2)) <= (appts_number-1) ):
+                                cli_text_window.refresh()
+                                cli_text_window.clear()
+                                user_apptId = apptIds[chr(c2)]  
+                                #get info for this appt only
+                                appt = GetAppt(db, user_apptId)
+                                #display appt, and give cancellation options
+                                getSpecificID(appt)
+                                #get updated appointment info 
+                                appts = GetAllAppts(db, email)
+                                apptIds, appts_numbers = appt_summary(appts, summaryIndex)
+                            else:
+                                cli_text_window.addstr("Sorry that choice is not valid on this page. \n", curses.color_pair(1))
+                           
                         elif c2 == ord('x') or c2 == ord('X'):
                             running = False
                             menu = 1 
