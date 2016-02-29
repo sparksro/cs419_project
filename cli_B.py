@@ -27,8 +27,12 @@ bottom_line = "Press 'M' to see Menu. 'Q' to quit."
 bottom_line2 = "Press UP or DOWN, No. to select an appt, X to drop out to main menu."
 bottom_line3 = "Press X to drop out to appt list, C to cancel apt."
 #varConnected = False;
+
 status =  "                                 logged-out";
 status2 =  "logged-out";
+status3 =  "                                  logged-in";#idfferent spacing versions used in different cases
+status4 =  " logged-in";
+status5 =  "                  logged-in";
 
 # ****  Email Settings *****************
 # These setting need to updated to instructor's email 
@@ -37,7 +41,7 @@ toaddr  = 'procmailtestscs@gmail.com'
 username = 'procmailtestscs'
 password = 'gobeavers!'
 #***************************************
-
+db = ''#db blank
 
 # *********   Functions  ***************************************************************************************
 def make_connection():
@@ -101,9 +105,9 @@ def updateDate(email, update):
             cli_text_window.addstr("An unknown error ocurred when attempting to store your user info!", curses.color_pair(1))		
 
 def get_param(prompt_string, colorPair):
-    stdscr.addstr(2, 2, prompt_string, curses.color_pair(colorPair))
-    stdscr.clrtoeol()
-    stdscr.refresh()
+    cli_text_window.addstr(0, 2, prompt_string, curses.color_pair(colorPair))
+    cli_text_window.clrtoeol()
+    cli_text_window.refresh()
     input = stdscr.getstr(10, 10, 60)
     return input
 
@@ -121,23 +125,22 @@ def reSetScreens(bottom_line, status, menu):
     cli_text_window.addstr(message, curses.color_pair(2))
     stdscr.refresh()
 
-def setBottomMenu(bottom_line, status, menu):# Change color of certain letters in the bottom menue
-    stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
-    if menu == 1:
+# Change colors of letters in the bottom menue
+def setBottomMenu(bottom_line, statusIn, menu):
+    stdscr.addstr(curses.LINES-1, 0, bottom_line + statusIn )
+    if menu == 1: # Normal menu
         stdscr.chgat(curses.LINES-1,6, 2, curses.A_BOLD | curses.color_pair(2))# the M
         stdscr.chgat(curses.LINES-1,24, 1, curses.A_BOLD | curses.color_pair(1))# the Q
         stdscr.refresh()
-    elif menu == 2:
+    elif menu == 2:# Appointments Summary
         stdscr.chgat(curses.LINES-1,6, 2, curses.A_BOLD | curses.color_pair(2))# the UP
         stdscr.chgat(curses.LINES-1,12, 4, curses.A_BOLD | curses.color_pair(2))# the Down
-        stdscr.chgat(curses.LINES-1,24, 1, curses.A_BOLD | curses.color_pair(1))# the X
-        stdscr.chgat(curses.LINES-1,52, 1, curses.A_BOLD | curses.color_pair(4))# the X
-        stdscr.refresh()	
-    elif menu == 3:
-        stdscr.chgat(curses.LINES-1,6, 2, curses.A_BOLD | curses.color_pair(2))# the UP
-        stdscr.chgat(curses.LINES-1,12, 4, curses.A_BOLD | curses.color_pair(2))# the Down
-        stdscr.chgat(curses.LINES-1,18, 3, curses.A_BOLD | curses.color_pair(4))# apt number
+        stdscr.chgat(curses.LINES-1,18, 2, curses.A_BOLD | curses.color_pair(4))# the No
         stdscr.chgat(curses.LINES-1,41, 1, curses.A_BOLD | curses.color_pair(1))# the X
+        stdscr.refresh()	
+    elif menu == 3:# Advising Session
+        stdscr.chgat(curses.LINES-1,6, 2, curses.A_BOLD | curses.color_pair(1))# the X
+        stdscr.chgat(curses.LINES-1,34, 1, curses.A_BOLD | curses.color_pair(2))# the C
         stdscr.refresh()	
     #set the logged-in/out color
     if LoggedIn is True:
@@ -177,16 +180,16 @@ def changePassword():
         cli_text_window.clear()
         cli_window.box()
         cli_text_window.refresh()
-        curses.echo()
-        curses.curs_set(0)
+
         tempPwd = operation_secure(newPwd1)
+        
         updatePassword(email, tempPwd)
+
 #RETURNS ALL APPTS for a specified faculty email
 #->empty list if no references exist
 def GetAllAppts(db, FacultyEmail ):
     cursor = db.cursor()
     sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC LIMIT 75 " %(FacultyEmail)
-
     try:
         cursor.execute(sql)
         #create empty list
@@ -209,7 +212,6 @@ def GetAllAppts(db, FacultyEmail ):
 def GetAppt(db, apptId):
     cursor = db.cursor()
     sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE Id='%s' " %(apptId)
-
     try:
         cursor.execute(sql)
         #create empty list
@@ -228,7 +230,8 @@ def GetAppt(db, apptId):
         print"Error: Unable to fetch data: "  + sql
     return results
 
-def appt_summary(appts, summaryIndex): #prints the currently selected appointment and returns its id
+#prints the currently selected appointment and returns its id
+def appt_summary(appts, summaryIndex): 
     #determine ending range for appointments summary
     apptLength = len(appts)
     if summaryIndex+5 > apptLength:
@@ -256,15 +259,17 @@ def appt_summary(appts, summaryIndex): #prints the currently selected appointmen
         appts_str +='  '+str(appts[index].get("StudentName"))
         appts_str +='\t'+str(appts[index].get("Status"))
         cli_text_window.addstr(appts_str + '\n\n')
+        #stdscr.chgat(curses.LINES-1,68, 8, curses.A_BOLD | curses.color_pair(2))
         apptId[str(refNo)] = appts[index].get("Id")
         refNo+=1
     #return apptId
     return (apptId, refNo)
-    
-def appt_print(appt): #prints the currently selected appointment and returns its id     
+
+#prints the currently selected appointment and returns its id     
+def appt_print(appt):    
     cli_text_window.refresh()
     cli_text_window.clear()
-    cli_text_window.addstr("\n")
+    cli_text_window.addstr("\n\n")
     cli_text_window.addstr("***************** ")
     cli_text_window.addstr("Advising Session", curses.color_pair(3))
     cli_text_window.addstr(" *****************\n")
@@ -281,29 +286,31 @@ def appt_print(appt): #prints the currently selected appointment and returns its
     current_id = appt[0].get("Id")
     return current_id
 
+#Special loop seperated out to get user input in the asvising system screen - 
+ # note the x below here only works in Avising session the other one is bellow in code
 def getSpecificID(appt):
-    menu = 2
-    status2 = " logged-in"
 
-    reSetScreens(bottom_line2, status2, menu)
+    reSetScreens(bottom_line3, status5, 3)
     current_id = appt_print(appt)
     running = True
     while running:
         c2 = cli_text_window.getch()
 
         if c2 == ord('c') or c2 == ord('C'):
-            confirmation = get_param("C to confirm or any other key to cancel. Followed with Enter:" ,2)
+            confirmation = get_param("\nC to confirm or any other key to cancel. Followed with Enter:" ,2)
+            cli_text_window.addstr("\n Processing...                                                ", curses.color_pair(2))
+            cli_text_window.refresh()
             if confirmation == 'c' or confirmation == 'C':
                 confirmation = ''
                 message = ''
                 #status = 'Pending' # just for testingx
-                status = 'Pending Cancellation'
+                appt_status = 'Pending Cancellation'
                 cursor = db.cursor()
 
                 try:	
-                        cursor.execute(""" UPDATE Appointment SET Status=%s WHERE Id=%s """,(status, current_id) )
+                        cursor.execute(""" UPDATE Appointment SET Status=%s WHERE Id=%s """,(appt_status, current_id) )
                         db.commit()
-                        cli_text_window.addstr("\n Status Changed.", curses.color_pair(1))
+                        cli_text_window.addstr("\n Status Changed.                                    ", curses.color_pair(4))
                 except:
                         cli_text_window.addstr("Database update error.", curses.color_pair(1))
 
@@ -315,15 +322,16 @@ def getSpecificID(appt):
                 cli_text_window.refresh()
                 cli_text_window.clear()
                 time.sleep(1.25)
-                reSetScreens(bottom_line2, status2, menu)
+                reSetScreens(bottom_line3, status5, 3)
+                stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
                 appt_print(appt)
             
             elif confirmation != 'c' or confirmation != 'C':
-                cli_text_window.addstr("\n Canceled.", curses.color_pair(1))
+                cli_text_window.addstr("\n Transaction canceled.", curses.color_pair(1))
                 cli_text_window.refresh()
                 cli_text_window.clear()
                 time.sleep(.90)
-                reSetScreens(bottom_line2, status2, menu)
+                reSetScreens(bottom_line3, status5, 3)
                 appt_print(appt)	
                 
         elif c2 == ord('x') or c2 == ord('X'):
@@ -332,7 +340,7 @@ def getSpecificID(appt):
             message = ''
             cli_text_window.refresh()
             cli_text_window.clear()
-            reSetScreens(bottom_line3, status2, menu)
+            reSetScreens(bottom_line2, status4, 2)
         
         c2 = '' #prevents infinite looping in the menue
            
@@ -354,6 +362,7 @@ def sendEmail (msg, subject):
 #sourced from stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
 def randomGenerator(size=10, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
+
 
 # *********   Set up screens  ***************************************************************************************
 # Begin Program and set initial screen
@@ -392,8 +401,7 @@ dims = cli_text_window.getmaxyx()
 message = "Welcome to the Curses based CLI!"
 cli_text_window.addstr(message) # this is the start up screen
 
-menu = 1
-setBottomMenu(bottom_line, status, menu)
+setBottomMenu(bottom_line, status, 1)
 
 # Draw a boarder arround the main quote window
 cli_window.box()
@@ -405,8 +413,8 @@ cli_window.noutrefresh()
 # Redraw the screen
 curses.doupdate()
 
-# *********   Create the event loop  ***************************************************************************************
 
+# *********   Create the event loop  ***************************************************************************************
 while True:
     c =  cli_window.getch()
     cli_text_window.clear()
@@ -418,7 +426,8 @@ while True:
             cli_text_window.refresh()
             cli_text_window.clear()
             cli_text_window.addstr(action_menu, curses.color_pair(2))
-            setBottomMenu(bottom_line, status, menu)
+            setBottomMenu(bottom_line, status, 1)
+            #stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
                 
         if c == ord('1'): #register menu item -not logged in
             curses.echo(1) 
@@ -443,6 +452,8 @@ while True:
             cli_text_window.refresh()
             cli_text_window.clear()	
             cli_window.box()
+            curses.curs_set(0)
+            curses.echo(0)
             cli_text_window.refresh()
             cli_text_window.addstr("A temporary password has been sent to your email address.\n")
             cli_text_window.addstr("Check your email, then return to login page to sign in.")
@@ -484,9 +495,7 @@ while True:
                         lastModified = row[3]
                         secured_pswd = operation_secure(pswd)
                     if secured_pswd == stored_password and email == stored_email:
-                        LoggedIn = True;
-                        status =  "                                  logged-in";#idfferent spacing versions used in different cases
-                        status2 =  " logged-in";
+                        LoggedIn = True
                         cli_window.clear()
                         cli_text_window.clear()
                         cli_window.box()
@@ -496,8 +505,7 @@ while True:
                             changePassword()
                             updateDate(email, date.datetime.today())
                         else:
-                            stdscr.addstr(curses.LINES-1, 0, bottom_line + status )
-                            setBottomMenu(bottom_line, status, menu)
+                            setBottomMenu(bottom_line, status3, 1)
                             stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
                             cli_text_window.addstr("You have been logged in.", curses.color_pair(3))
                     else:
@@ -508,11 +516,17 @@ while True:
                         cli_text_window.refresh()
                         cli_text_window.addstr("Your email or password did not match -try again!.", curses.color_pair(1))
                     # set echo and curser back to original
+
                     curses.echo(0) 
                     curses.curs_set(0)
             except:
                 print"Error: Unable to fetch data."
-              
+            c = ''
+            curses.echo(0) 
+            #cli_text_window.refresh()
+            #cli_text_window.clear()	
+            #cli_window.box()
+
         if c == ord('3'):#forgotten password menue item -not logged in
             curses.echo(1) 
             curses.curs_set(1)
@@ -521,12 +535,18 @@ while True:
             addr1 = ''
             pswd1 = ''
             addr1 = get_param("Enter your email address:",0)
-            cli_text_window.clear()
-            cli_text_window.refresh()
             
+            cli_text_window.clear()
+            cli_text_window.addstr("Processing..\n", curses.color_pair(2))
+            cli_text_window.refresh()
+            cli_text_window.clear()
+
+            curses.curs_set(0)
+            curses.echo(0)
             #send email with temp password
             tempPwd = randomGenerator()
             subject = "Appointment CLI Password Reset"
+
             sendEmail(tempPwd, subject)
             # prepare the password for secure storage in the database by hashing and salting it.
             saltedPwd = operation_secure(tempPwd)
@@ -537,8 +557,9 @@ while True:
             cli_text_window.clear()	
             cli_window.box()
             cli_text_window.refresh()
-            cli_text_window.addstr("A temporary password has been sent to your email address.\n")
-            cli_text_window.addstr("Check your email, then return to login page.")
+            
+            cli_text_window.addstr("A temporary password has been sent to your email address.\n", curses.color_pair(4))
+            cli_text_window.addstr("Check your email, then return to login page.", curses.color_pair(4))
 
     # Second menu if user is logged in **********************************        
     else:
@@ -546,31 +567,29 @@ while True:
             cli_text_window.refresh()
             cli_text_window.clear()
             cli_text_window.addstr(logged_menu, curses.color_pair(2))
-            setBottomMenu(bottom_line, status, menu)
+            #setBottomMenu(bottom_line, status3, 1)
 
         if c == ord('1'):
-            cli_text_window.refresh()
-            cli_text_window.clear()
-            cli_text_window.keypad(1)
-            menu = 2 
-            message = ''
+
+            cli_text_window.keypad(1)# turns on key pad for up and down arrow detection           
 
             if LoggedIn is False:
                 cli_text_window.addstr("You must log in first!", curses.color_pair(1))
             else:           
                 #get appointments
+                
                 appts = GetAllAppts(db, email)
                 num = len(appts)
                 appts_number = 0# number of appointments in the summary screen 
 
                 if num > 0:
                     running = True
-                    reSetScreens(bottom_line2, status2, menu)
                     #show first 5 appointments
                     summaryIndex = 0 
                     endSummary = False
                     
                     apptIds, appts_number = appt_summary(appts, summaryIndex)
+                    setBottomMenu(bottom_line2, status4, 2)
                     while running:
                         c2 = cli_text_window.getch()
                         
@@ -599,37 +618,39 @@ while True:
                         
                         # Gets user appointment number input from Appointments status menu
                         elif c2 == ord('1') or c2 == ord('2') or c2 == ord('3') or c2 == ord('4') or c2 == ord('5'):
-                            menu = 3
-                            reSetScreens(bottom_line3, status2, menu)
+                                            
                             if( int(chr(c2)) <= (appts_number-1) ):
                                 cli_text_window.refresh()
                                 cli_text_window.clear()
+
                                 user_apptId = apptIds[chr(c2)]  
                                 #get info for this appt only
                                 appt = GetAppt(db, user_apptId)
                                 #display appt, and give cancellation options
                                 getSpecificID(appt)
                                 #get updated appointment info 
+                                
                                 appts = GetAllAppts(db, email)
                                 apptIds, appts_numbers = appt_summary(appts, summaryIndex)
+                                c2 =''
                             else:
                                 cli_text_window.addstr("Sorry that choice is not valid on this page. \n", curses.color_pair(1))
                            
                         elif c2 == ord('x') or c2 == ord('X'):
                             running = False
-                            menu = 1 
+                       
                             message = ''
                             cli_text_window.refresh()
                             cli_text_window.clear()
-                            reSetScreens(bottom_line, status2, menu)
+                            setBottomMenu(bottom_line, status3, 1)
+                            	
                        # else:
                             #cli_text_window.addstr("Not a valid option, try again\n", curses.color_pair(1))     
                             
-                else:
-                    
+                else:                 
                     cli_text_window.addstr("There was an error or you have no appointments in the database!.", curses.color_pair(1))	
                     time.sleep(2)
-                    reSetScreens(bottom_line, status2, menu)  
+                    
 
         if c == ord('2'):# change password
             secured_pswd = ''
@@ -665,22 +686,22 @@ while True:
                     cli_text_window.clear()
             if secured_pswd == stored_password:
                 changePassword()
+                curses.echo(0)
             else:
                 cli_text_window.addstr("Your password did not match.", curses.color_pair(3))
 
         if c == ord('3'):#logout
             cli_text_window.refresh()
             cli_text_window.clear()
-            try:
+            if LoggedIn:
                 disconnect(db)
-                status =  "                                 logged-out";
+                #status =  "                                 logged-out";
                 LoggedIn = False;
-                setBottomMenu(bottom_line, status, menu)
+                setBottomMenu(bottom_line, status, 1)
                 cli_text_window.addstr("You have been logged out.", curses.color_pair(3))
-            except:
+            else:
                 cli_text_window.addstr("You must be logged in to log out!.", curses.color_pair(1))
             
-
     
     if c == ord('e') or c == ord('E'):
         q =-1
