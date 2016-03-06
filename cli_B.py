@@ -37,7 +37,7 @@ status5 =  "                  logged-in";
 # ****  Email Settings *****************
 # These setting need to updated to instructor's email 
 fromaddr = 'procmailtestscs@gmail.com'
-toaddr  = 'procmailtestscs@gmail.com'
+#toaddr  = 'procmailtestscs@gmail.com'
 username = 'procmailtestscs'
 password = 'gobeavers!'
 #***************************************
@@ -105,7 +105,7 @@ def updateDate(email, update):
             cli_text_window.addstr("An unknown error ocurred when attempting to store your user info!", curses.color_pair(1))		
 
 def get_param(prompt_string, colorPair):
-    cli_text_window.addstr(0, 2, prompt_string, curses.color_pair(colorPair))
+    cli_text_window.addstr(2, 2, prompt_string, curses.color_pair(colorPair))
     cli_text_window.clrtoeol()
     cli_text_window.refresh()
     input = stdscr.getstr(10, 10, 60)
@@ -158,6 +158,7 @@ def operation_secure(password):
 def changePassword():
     cli_text_window.refresh()
     cli_text_window.clear()
+    cli_text_window.addstr("You must change your password\n", curses.color_pair(1))
     newPwd1=''
     newPwd2=' '
     curses.noecho()# temp turn off echo so the pwd does not appear on the screen
@@ -172,8 +173,6 @@ def changePassword():
         if newPwd1 != newPwd2:
             cli_text_window.clear()
             cli_text_window.addstr("passwords must match!", curses.color_pair(1))
-            cli_text_window.refresh()
-            cli_text_window.clear()
     
     if newPwd1 == newPwd2:
         cli_window.clear()
@@ -189,7 +188,7 @@ def changePassword():
 #->empty list if no references exist
 def GetAllAppts(db, FacultyEmail ):
     cursor = db.cursor()
-    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC LIMIT 75 " %(FacultyEmail)
+    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, TIME_FORMAT(StartTime, '%s') as STime, TIME_FORMAT(EndTime, '%s') as ETime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC LIMIT 75 " %('%h:%i%p', '%h:%i%p',FacultyEmail)
     try:
         cursor.execute(sql)
         #create empty list
@@ -197,12 +196,7 @@ def GetAllAppts(db, FacultyEmail ):
         if cursor.rowcount != 0:
             catch = cursor.fetchall()
             for r in catch:
-              #format time object
-              #source: stackoverflow.com/questions/904746/how-to-remove-all-characters-after-a-specific-character-in-python
-              STime = ':'.join(str(r[7]).split(':')[:-1])
-              ETime = ':'.join(str(r[8]).split(':')[:-1])
-
-              results.append({"Id": str(r[0]), "FacultyName": r[1], "FacultyEmail": r[2], "StudentName":r[3],"StudentEmail":r[4], "Date": r[5].strftime('%m/%d/%y'), "Status": r[6], "StartTime": STime, "EndTime": ETime}) 
+              results.append({"Id": str(r[0]), "FacultyName": r[1], "FacultyEmail": r[2], "StudentName":r[3],"StudentEmail":r[4], "Date": r[5].strftime('%m/%d/%y'), "Status": r[6], "StartTime": r[7], "EndTime": r[8]}) 
               #results.append('Date: '+ str(r[5]) + '  Start time: ' + STime + '  End Time: '+ ETime + '  S Name: ' + str(r[3]) + ' S. Email: ' + str(r[4]) + '  Status: '+ str(r[6] ) )
     except:
         print"Error: Unable to fetch data: "  + sql
@@ -211,7 +205,8 @@ def GetAllAppts(db, FacultyEmail ):
 #returns appointment for passed in appointment ID
 def GetAppt(db, apptId):
     cursor = db.cursor()
-    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE Id='%s' " %(apptId)
+    #sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, CAST(StartTime AS CHAR) as StartTime, CAST(EndTime AS CHAR) as EndTime FROM Appointment WHERE Id='%s' " %(apptId)
+    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, TIME_FORMAT(StartTime, '%s') as STime, TIME_FORMAT(EndTime, '%s') as ETime FROM Appointment WHERE Id='%s' " %('%h:%i%p', '%h:%i%p', apptId)
     try:
         cursor.execute(sql)
         #create empty list
@@ -219,12 +214,7 @@ def GetAppt(db, apptId):
         if cursor.rowcount != 0:
             catch = cursor.fetchall()
             for r in catch:
-              #format time object
-              #source: stackoverflow.com/questions/904746/how-to-remove-all-characters-after-a-specific-character-in-python
-              STime = ':'.join(str(r[7]).split(':')[:-1])
-              ETime = ':'.join(str(r[8]).split(':')[:-1])
-
-              results.append({"Id": str(r[0]), "FacultyName": r[1], "FacultyEmail": r[2], "StudentName":r[3],"StudentEmail":r[4], "Date": r[5].strftime('%m/%d/%y'), "Status": r[6], "StartTime": STime, "EndTime": ETime}) 
+              results.append({"Id": str(r[0]), "FacultyName": r[1], "FacultyEmail": r[2], "StudentName":r[3],"StudentEmail":r[4], "Date": r[5].strftime('%m/%d/%y'), "Status": r[6], "StartTime": r[7], "EndTime": r[8]}) 
               #results.append('Date: '+ str(r[5]) + '  Start time: ' + STime + '  End Time: '+ ETime + '  S Name: ' + str(r[3]) + ' S. Email: ' + str(r[4]) + '  Status: '+ str(r[6] ) )
     except:
         print"Error: Unable to fetch data: "  + sql
@@ -232,6 +222,7 @@ def GetAppt(db, apptId):
 
 #prints the currently selected appointment and returns its id
 def appt_summary(appts, summaryIndex): 
+    #reSetScreens(bottom_line3, status5, 3)
     #determine ending range for appointments summary
     apptLength = len(appts)
     if summaryIndex+5 > apptLength:
@@ -245,7 +236,7 @@ def appt_summary(appts, summaryIndex):
     cli_text_window.addstr("***************** ")
     cli_text_window.addstr("Appointments Summary, pg " + str(page), curses.color_pair(3))
     cli_text_window.addstr(" ****************\n\n")
-    cli_text_window.addstr('No.  Date      Begin  End    Student    Status\t\t\n', curses.color_pair(3))
+    cli_text_window.addstr('No.  Date      Begin    End      Status    \tStudent\n', curses.color_pair(3))
     refNo = 1 
     apptId ={} 
     
@@ -256,13 +247,11 @@ def appt_summary(appts, summaryIndex):
         appts_str += '    '+str(appts[index].get("Date"))
         appts_str +='  '+str(appts[index].get("StartTime"))
         appts_str +='  '+str(appts[index].get("EndTime"))
-        appts_str +='  '+str(appts[index].get("StudentName"))
-        appts_str +='\t'+str(appts[index].get("Status"))
+        appts_str +='  '+str(appts[index].get("Status"))
+        appts_str +='\t'+str(appts[index].get("StudentName"))
         cli_text_window.addstr(appts_str + '\n\n')
-        #stdscr.chgat(curses.LINES-1,68, 8, curses.A_BOLD | curses.color_pair(2))
         apptId[str(refNo)] = appts[index].get("Id")
         refNo+=1
-    #return apptId
     return (apptId, refNo)
 
 #prints the currently selected appointment and returns its id     
@@ -290,6 +279,7 @@ def appt_print(appt):
  # note the x below here only works in Avising session the other one is bellow in code
 def getSpecificID(appt):
 
+
     reSetScreens(bottom_line3, status5, 3)
     current_id = appt_print(appt)
     running = True
@@ -303,28 +293,26 @@ def getSpecificID(appt):
             if confirmation == 'c' or confirmation == 'C':
                 confirmation = ''
                 message = ''
-                #status = 'Pending' # just for testingx
-                appt_status = 'Pending Cancellation'
                 cursor = db.cursor()
+                #send cancellation email
+                apptTime = appt[0].get("StartTime") + " - " + appt[0].get("EndTime")
+                cancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
 
                 try:	
-                        cursor.execute(""" UPDATE Appointment SET Status=%s WHERE Id=%s """,(appt_status, current_id) )
-                        db.commit()
-                        cli_text_window.addstr("\n Status Changed.                                    ", curses.color_pair(4))
+                        #cursor.execute(""" Delete FROM Appointment WHERE Id=%s """,(current_id) )
+                        #db.commit()
+                        cli_text_window.addstr("\n Appointment Removed...Redirecting to Appointments summary", curses.color_pair(4))
                 except:
                         cli_text_window.addstr("Database update error.", curses.color_pair(1))
 
-                #send cancellation email
-                subject = "Advising Signup Cancellation"
-                sendEmail(current_id, subject)
-                #get udpated appt info
-                appt = GetAppt(db, current_id)
+                #show appt removed message, wait then redirect to appointment summary listing
                 cli_text_window.refresh()
                 cli_text_window.clear()
-                time.sleep(1.25)
-                reSetScreens(bottom_line3, status5, 3)
-                stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
-                appt_print(appt)
+                time.sleep(2)
+                menu = 3 
+                message = ''
+                running = False
+                reSetScreens(bottom_line2, status4, 2)
             
             elif confirmation != 'c' or confirmation != 'C':
                 cli_text_window.addstr("\n Transaction canceled.", curses.color_pair(1))
@@ -356,6 +344,52 @@ def sendEmail (msg, subject):
     server.starttls()
     server.login(username,password)
     server.sendmail(fromaddr, toaddr, message.as_string())
+    server.quit()
+
+def forgotPwdEmail (tempPwd, toEmail):
+    # Create a text/plain message
+    msg = "Your temporary password is: %s.  Use this to log in to the Appointment CLI.  You will be prompted to change your password to one of your choosing.\n\nEnjoy!" %(tempPwd)
+    message = MIMEText(msg)
+    message['Subject'] = "Appointment CLI Password Reset"
+    message['From'] = fromaddr 
+    message['To'] =toEmail 
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo()
+    server.starttls()
+    server.login(username,password)
+    server.sendmail(fromaddr, toEmail, message.as_string())
+    server.quit()
+
+def newUserEmail (tempPwd, toEmail):
+    # Create a text/plain message
+    msg = "Welcome to the Appointment CLI!\n\nYour temporary password is: %s.  Use this to log in to the Appointment CLI for the first time.  You will be prompted to change your password to one of your choosing.\n\nEnjoy!" %(tempPwd)
+    message = MIMEText(msg)
+    message['Subject'] = "Appointment CLI New User"
+    message['From'] = fromaddr 
+    message['To'] = toEmail
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo()
+    server.starttls()
+    server.login(username,password)
+    server.sendmail(fromaddr, toEmail, message.as_string())
+    server.quit()
+
+def cancellationEmail (sName, sEmail, date, time, aName, aEmail):
+    # Create a text/plain message
+    msg = "Advising Signup with %s CANCELLED\nName: %s\nEmail: %s\nDate: %s\nTime: %s\n\nPlease contact support@engr.oregonstate.edu if you experience problems" %(aName, sName, sEmail, date, time)
+    message = MIMEText(msg)
+    recipients = [sEmail,aEmail]
+    message['Subject'] = "Advising Signup Cancellation"
+    message['From'] = fromaddr 
+    message['To'] = ", ".join(recipients)
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo()
+    server.starttls()
+    server.login(username,password)
+    server.sendmail(fromaddr, recipients, message.as_string())
     server.quit()
 
 #random temporary password generator
@@ -439,24 +473,39 @@ while True:
             pswd1 = ''
             addr1 = get_param("Enter your email address:",0)
             cli_text_window.clear()
+            cli_text_window.addstr("Processing..\n", curses.color_pair(2))
             cli_text_window.refresh()
-            
-            #send email with temp password
-            tempPwd = randomGenerator()
-            subject = "Appointment CLI New User"
-            sendEmail(tempPwd, subject)
-            # prepare the password for secure storage in the database by hashing and salting it.
-            saltedPwd = operation_secure(tempPwd)
-            insertNewUsser(addr1, saltedPwd)
+            cli_text_window.clear()
+            #check if email already exists in db
+            db = make_connection()
+            cursor = db.cursor()
 
-            cli_text_window.refresh()
-            cli_text_window.clear()	
-            cli_window.box()
-            curses.curs_set(0)
-            curses.echo(0)
-            cli_text_window.refresh()
-            cli_text_window.addstr("A temporary password has been sent to your email address.\n")
-            cli_text_window.addstr("Check your email, then return to login page to sign in.")
+            sql = "SELECT * FROM User WHERE Email = '%s' ORDER BY id DESC LIMIT 1" %(addr1)
+
+            try:
+                cursor.execute(sql)
+                if cursor.rowcount != 0:
+                    cli_text_window.addstr("User already exists. Try again.\n", curses.color_pair(2))
+                else:
+                    #send email with temp password
+                    tempPwd = randomGenerator()
+                    newUserEmail(tempPwd, addr1)
+                    # prepare the password for secure storage in the database by hashing and salting it.
+                    saltedPwd = operation_secure(tempPwd)
+                    insertNewUsser(addr1, saltedPwd)
+
+                    cli_text_window.refresh()
+                    cli_text_window.clear()	
+                    cli_window.box()
+                    curses.curs_set(0)
+                    curses.echo(0)
+                    cli_text_window.refresh()
+                    cli_text_window.addstr("A temporary password has been sent to your email address.\n")
+                    cli_text_window.addstr("Check your email, then return to login page to sign in.")
+            except:
+                print"Error: Unable to fetch data."
+            
+            
                         
 
         if c == ord('2'):# login menue item -not logged in
@@ -501,9 +550,9 @@ while True:
                         cli_window.box()
                         cli_text_window.refresh()
                         if lastModified is None:
-                            cli_text_window.addstr("You must change your password", curses.color_pair(1))
                             changePassword()
                             updateDate(email, date.datetime.today())
+                            setBottomMenu(bottom_line, status3, 1)
                         else:
                             setBottomMenu(bottom_line, status3, 1)
                             stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
@@ -545,9 +594,8 @@ while True:
             curses.echo(0)
             #send email with temp password
             tempPwd = randomGenerator()
-            subject = "Appointment CLI Password Reset"
 
-            sendEmail(tempPwd, subject)
+            forgotPwdEmail(tempPwd, addr1)
             # prepare the password for secure storage in the database by hashing and salting it.
             saltedPwd = operation_secure(tempPwd)
             updatePassword(addr1, saltedPwd)
@@ -577,6 +625,7 @@ while True:
                 cli_text_window.addstr("You must log in first!", curses.color_pair(1))
             else:           
                 #get appointments
+                reSetScreens(bottom_line3, status5, 3)
                 
                 appts = GetAllAppts(db, email)
                 num = len(appts)
@@ -589,7 +638,7 @@ while True:
                     endSummary = False
                     
                     apptIds, appts_number = appt_summary(appts, summaryIndex)
-                    setBottomMenu(bottom_line2, status4, 2)
+                    #setBottomMenu(bottom_line2, status4, 2)
                     while running:
                         c2 = cli_text_window.getch()
                         
@@ -649,7 +698,7 @@ while True:
                             
                 else:                 
                     cli_text_window.addstr("There was an error or you have no appointments in the database!.", curses.color_pair(1))	
-                    time.sleep(2)
+                    setBottomMenu(bottom_line, status3, 1)
                     
 
         if c == ord('2'):# change password
