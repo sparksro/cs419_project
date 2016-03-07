@@ -22,7 +22,7 @@ import datetime as date
 from subprocess import call# for the screen resize
 
 # make sure the terminal screen size is correct so we have room for the proper display.
-call(["printf","\e[8;28;85t"])
+call(["printf","\e[8;24;80t"])
 time.sleep(.125)#have to give the system settings time to update or the new window we launch bellow will be the wrong size.
 
 LoggedIn = False;
