@@ -17,8 +17,13 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 import string
-import random
+import random, os
 import datetime as date
+from subprocess import call# for the screen resize
+
+# make sure the terminal screen size is correct so we have room for the proper display.
+call(["printf","\e[8;28;85t"])
+time.sleep(.125)#have to give the system settings time to update or the new window we launch bellow will be the wrong size.
 
 LoggedIn = False;
 action_menu = "Enter the number to perform the action.\n---------------------------------------\n1. Register \n2. Login \n3. Forgot Password"
@@ -26,7 +31,6 @@ logged_menu = "Enter the number to perform the action.\n------------------------
 bottom_line = "Press 'M' to see Menu. 'Q' to quit."
 bottom_line2 = "Press UP or DOWN, No. to select an appt, X to drop out to main menu."
 bottom_line3 = "Press X to drop out to appt list, C to cancel apt."
-#varConnected = False;
 
 status =  "                                 logged-out";
 status2 =  "logged-out";
@@ -127,6 +131,7 @@ def reSetScreens(bottom_line, status, menu):
 
 # Change colors of letters in the bottom menue
 def setBottomMenu(bottom_line, statusIn, menu):
+    
     stdscr.addstr(curses.LINES-1, 0, bottom_line + statusIn )
     if menu == 1: # Normal menu
         stdscr.chgat(curses.LINES-1,6, 2, curses.A_BOLD | curses.color_pair(2))# the M
@@ -147,6 +152,10 @@ def setBottomMenu(bottom_line, statusIn, menu):
         stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
     elif LoggedIn is False:
         stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
+    
+    	#cli_text_window.clear()
+        #cli_text_window.addstr("Terminal size must be set to 80 x 24\n.  Quit, resize and relaunch!\n", curses.color_pair(1))
+        #cli_text_window.refresh()
 
 # this currently uses 9 char salting and md5 hashing -although this is probably fairly sucure there are more secure methods out there.
 # this might be an alternative https://pypi.python.org/pypi/scrypt/
@@ -400,7 +409,11 @@ def randomGenerator(size=10, chars=string.ascii_uppercase + string.digits):
 
 # *********   Set up screens  ***************************************************************************************
 # Begin Program and set initial screen
-stdscr = curses.initscr()
+
+try:
+	stdscr = curses.initscr()
+except:
+	print "Problem initializing base screen."
 
 # Propery initialize the screen
 curses.noecho()  #dont echo chars as I type
@@ -423,13 +436,21 @@ stdscr.addstr(" Advising Schedule Interface", curses.A_REVERSE) # what becomes t
 stdscr.chgat(-1, curses.A_REVERSE) #then finishes the line off with blank space.
 
 # Set up the base window
-cli_window = curses.newwin(curses.LINES-2,curses.COLS, 1,0)
+try:
+	cli_window = curses.newwin(curses.LINES-2,curses.COLS, 1,0)
+except:
+	print "Problem initializing new window."
 
 # Create a sub-window so as to clearly display the text with out overwriting the quote window borders.
-cli_text_window = cli_window.subwin(curses.LINES-6, curses.COLS-4,3,2)
+try:
+	cli_text_window = cli_window.subwin(curses.LINES-6, curses.COLS-4,3,2)
+except:
+	print "Problem initializing cli_window."
 
 # get the size of the text window for later use
-dims = cli_text_window.getmaxyx()
+	dims = cli_text_window.getmaxyx()
+	#dims2 = stdscr.getmaxyx()
+	#cli_text_window.addstr("base: " + dims + "text: " + dims2 + "\n", curses.color_pair(2))
 
 # Text to go in lower text box made by using both iner and outer window
 message = "Welcome to the Curses based CLI!"
@@ -461,7 +482,10 @@ while True:
             cli_text_window.clear()
             cli_text_window.addstr(action_menu, curses.color_pair(2))
             setBottomMenu(bottom_line, status, 1)
-            #stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(2))
+
+            dims = cli_text_window.getmaxyx()
+            dims2 = stdscr.getmaxyx()
+            #cli_text_window.addstr("\n base: " + str(dims2) + "text: " + str(dims) + "\n", curses.color_pair(2))
                 
         if c == ord('1'): #register menu item -not logged in
             curses.echo(1) 
@@ -504,8 +528,6 @@ while True:
                     cli_text_window.addstr("Check your email, then return to login page to sign in.")
             except:
                 print"Error: Unable to fetch data."
-            
-            
                         
 
         if c == ord('2'):# login menue item -not logged in
