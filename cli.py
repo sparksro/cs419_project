@@ -22,7 +22,7 @@ import datetime as date
 from subprocess import call# for the screen resize
 
 # make sure the terminal screen size is correct so we have room for the proper display.
-call(["printf","\e[8;24;80t"])
+call(["printf","\e[8;24;100t"])
 time.sleep(.125)#have to give the system settings time to update or the new window we launch bellow will be the wrong size.
 
 LoggedIn = False;
@@ -305,7 +305,10 @@ def getSpecificID(appt):
                 cursor = db.cursor()
                 #send cancellation email
                 apptTime = appt[0].get("StartTime") + " - " + appt[0].get("EndTime")
-                cancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
+                if appt[0].get("Status") == "Accepted":
+                    cancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
+                else:
+                    pendingCancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
 
                 try:	
                         #cursor.execute(""" Delete FROM Appointment WHERE Id=%s """,(current_id) )
@@ -391,6 +394,22 @@ def cancellationEmail (sName, sEmail, date, time, aName, aEmail):
     message = MIMEText(msg)
     recipients = [sEmail,aEmail]
     message['Subject'] = "Advising Signup Cancellation"
+    message['From'] = fromaddr 
+    message['To'] = ", ".join(recipients)
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo()
+    server.starttls()
+    server.login(username,password)
+    server.sendmail(fromaddr, recipients, message.as_string())
+    server.quit()
+
+def pendingCancellationEmail (sName, sEmail, date, time, aName, aEmail):
+    # Create a text/plain message
+    msg = "Advising Signup with %s CANCELLED\nName: %s\nEmail: %s\nDate: %s\nTime: %s\n\nPlease contact support@engr.oregonstate.edu if you experience problems" %(aName, sName, sEmail, date, time)
+    message = MIMEText(msg)
+    recipients = [sEmail,aEmail]
+    message['Subject'] = "Advising Signup Pending Appointment Cancellation"
     message['From'] = fromaddr 
     message['To'] = ", ".join(recipients)
 
@@ -647,7 +666,7 @@ while True:
                 cli_text_window.addstr("You must log in first!", curses.color_pair(1))
             else:           
                 #get appointments
-                reSetScreens(bottom_line3, status5, 3)
+                reSetScreens(bottom_line2, status5, 2)
                 
                 appts = GetAllAppts(db, email)
                 num = len(appts)
