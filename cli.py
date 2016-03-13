@@ -25,6 +25,7 @@ from subprocess import call# for the screen resize
 call(["printf","\e[8;24;80t"])
 time.sleep(.125)#have to give the system settings time to update or the new window we launch bellow will be the wrong size.
 
+# Commonly used prompts and user indicators
 LoggedIn = False;
 action_menu = "Enter the number to perform the action.\n---------------------------------------\n1. Register \n2. Login \n3. Forgot Password"
 logged_menu = "Enter the number to perform the action.\n---------------------------------------\n1. View Advising Schedule \n2. Change Password \n3. Logout"
@@ -47,7 +48,9 @@ password = 'gobeavers!'
 #***************************************
 db = ''#db blank
 
+
 # *********   Functions  ***************************************************************************************
+
 def make_connection():
 	try:
 	   db = MySQLdb.connect("52.10.233.116","advising_user", "VLrMMJSScH6ZLHca",  "advising_db")
@@ -108,6 +111,7 @@ def updateDate(email, update):
             db.rollback()
             cli_text_window.addstr("An unknown error ocurred when attempting to store your user info!", curses.color_pair(1))		
 
+# main function that get users input inside the curses environment windows
 def get_param(prompt_string, colorPair):
     cli_text_window.addstr(2, 2, prompt_string, curses.color_pair(colorPair))
     cli_text_window.clrtoeol()
@@ -197,7 +201,7 @@ def changePassword():
 #->empty list if no references exist
 def GetAllAppts(db, FacultyEmail ):
     cursor = db.cursor()
-    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, TIME_FORMAT(StartTime, '%s') as STime, TIME_FORMAT(EndTime, '%s') as ETime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC LIMIT 75 " %('%h:%i%p', '%h:%i%p',FacultyEmail)
+    sql = "SELECT Id, FacultyName, FacultyEmail, StudentName, StudentEmail, Date, Status, TIME_FORMAT(StartTime, '%s') as STime, TIME_FORMAT(EndTime, '%s') as ETime FROM Appointment WHERE FacultyEmail='%s' ORDER BY Date DESC LIMIT 100 " %('%h:%i%p', '%h:%i%p',FacultyEmail)
     try:
         cursor.execute(sql)
         #create empty list
@@ -287,7 +291,6 @@ def appt_print(appt):
 #Special loop seperated out to get user input in the asvising system screen - 
  # note the x below here only works in Avising session the other one is bellow in code
 def getSpecificID(appt):
-
 
     reSetScreens(bottom_line3, status5, 3)
     current_id = appt_print(appt)
