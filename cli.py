@@ -302,20 +302,27 @@ def getSpecificID(appt):
             if confirmation == 'c' or confirmation == 'C':
                 confirmation = ''
                 message = ''
+                #db = make_connection()
                 cursor = db.cursor()
                 #send cancellation email
                 apptTime = appt[0].get("StartTime") + " - " + appt[0].get("EndTime")
-                if appt[0].get("Status") == "Accepted":
-                    cancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
-                else:
-                    pendingCancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
-
-                try:	
-                        cursor.execute(""" Delete FROM Appointment WHERE Id=%s """,(current_id) )
-                        db.commit()
-                        cli_text_window.addstr("\n Appointment Removed...Redirecting to Appointments summary", curses.color_pair(4))
+                #if appt[0].get("Status") == "Accepted":
+                    #cancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
+                #else:
+                pendingCancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
+                try:
+                    cur_id = int(current_id)
+                    cli_text_window.addstr("\n id # -> " + cur_id + "\n", curses.color_pair(1))// check to make sure we have the right number
+                    #sql = "DELETE FROM APPOINTMENT WHERE Id =(id)\
+                    sql = "DELETE FROM (db) APPOINTMENT WHERE APPOINTMENT ID =(id)\
+                    VALUES('%s','%s')" %\
+                    (db,cur_id)
+                    #cursor.execute(""" Delete FROM Appointment WHERE APPOINTMENT Id = %s """,(current_id) )
+                    cursor.execute(sql)
+                    db.commit()
+                    cli_text_window.addstr("\n Appointment Removed...Redirecting to Appointments summary", curses.color_pair(4))
                 except:
-                        cli_text_window.addstr("Database update error.", curses.color_pair(1))
+                    cli_text_window.addstr("\nDatabase update error.\n", curses.color_pair(1))
 
                 #show appt removed message, wait then redirect to appointment summary listing
                 cli_text_window.refresh()
@@ -529,6 +536,8 @@ while True:
                 cursor.execute(sql)
                 if cursor.rowcount != 0:
                     cli_text_window.addstr("User already exists. Try again.\n", curses.color_pair(2))
+                    curses.echo(0)
+                    c = ''
                 else:
                     #send email with temp password
                     tempPwd = randomGenerator()
