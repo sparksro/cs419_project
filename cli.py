@@ -157,9 +157,6 @@ def setBottomMenu(bottom_line, statusIn, menu):
     elif LoggedIn is False:
         stdscr.chgat(curses.LINES-1,68, 10, curses.A_BOLD | curses.color_pair(1))
     
-    	#cli_text_window.clear()
-        #cli_text_window.addstr("Terminal size must be set to 80 x 24\n.  Quit, resize and relaunch!\n", curses.color_pair(1))
-        #cli_text_window.refresh()
 
 # this currently uses 9 char salting and md5 hashing -although this is probably fairly sucure there are more secure methods out there.
 # this might be an alternative https://pypi.python.org/pypi/scrypt/
@@ -314,8 +311,8 @@ def getSpecificID(appt):
                     pendingCancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
 
                 try:	
-                        #cursor.execute(""" Delete FROM Appointment WHERE Id=%s """,(current_id) )
-                        #db.commit()
+                        cursor.execute(""" Delete FROM Appointment WHERE Id=%s """,(current_id) )
+                        db.commit()
                         cli_text_window.addstr("\n Appointment Removed...Redirecting to Appointments summary", curses.color_pair(4))
                 except:
                         cli_text_window.addstr("Database update error.", curses.color_pair(1))

@@ -68,7 +68,6 @@ db= make_connection()
 if db == 1:
     sys.exit(1)
 
-
 # read email from std in 
 full_email = sys.stdin.readlines()
 
@@ -89,20 +88,25 @@ if((not email_subject.startswith("Advising Signup") and not email_subject.starts
 	sys.exit(1)
 
 
-# check if email is from the user's email address if so check if it is not accepted or declined
+# check if email is from the user's email address if so check if it is accepted or declined
 # if this is the case then this is the email with the attachment added
-if "sparksro@oregonstate.edu" not in email_from and "procmailtestscs@gmail.com" not in email_from and "do.not.reply@engr.orst.edu" not in email_from: 
+# this means we need to get the uid out of the encoded response 
+if "procmailtestscs@gmail.com" not in email_from and "do.not.reply@engr.orst.edu" not in email_from: 
 	if email_subject.startswith("Accepted") or email_subject.startswith("Declined"):
-		# print the final email adapted from http://stackoverflow.com/questions/389398/trouble-with-encoding-in-emails
+		# get the email into a string adapted from http://stackoverflow.com/questions/389398/trouble-with-encoding-in-emails
 		out_obj = StringIO()
 		gen = Generator(out_obj)
 		gen.flatten(email_obj)
+		# get the email string
 		email_string = out_obj.getvalue()
+		# find the base 64 encoded ics file 
 		reg_exp = re.compile('base64\s*([^\-]*)')
 		match = reg_exp.search(email_string)
 		if match:
+			# decode the vevent to get it in readable format 
 			base64_encoded_vevent = match.group(1)
 			decoded_vevent = base64.b64decode(base64_encoded_vevent)
+			# get the uid from decoded portion 
 			reg_exp = re.compile('UID:([^\s]+)')
 			match = reg_exp.search(decoded_vevent)
 			if match:
@@ -111,10 +115,12 @@ if "sparksro@oregonstate.edu" not in email_from and "procmailtestscs@gmail.com" 
 				sys.exit(12)
 		else:
 			sys.exit(11)
+		# either delete or update our appointment 
 		if email_subject.startswith("Accepted"):
 			UpdateAppt(db, "Accepted", uid)
 		else:
 			DeleteAppt(db, uid)
+		# exit without printing anything so that this email ends up being deleted before getting to the user 
 		sys.exit(0)
 	else:
 		sys.exit(13)
@@ -188,15 +194,12 @@ appt_time_end = datetime.strftime(appt_time_end, '%H%M%S')
 appt_start_date = appt_date + "T" + appt_time_beg + "Z"
 appt_end_date = appt_date + "T" + appt_time_end + "Z"
 
-
 # handle different email cases
 if email_subject.startswith("Advising Signup with"):
     # create unique id
     uid = appt_start_date + student_email
-    # remove, for test
-    new_email_to = "profiod1@outlook.com"
     # change if you want email reply to go somewhere different
-    reply_to = "procmailtestsrelease@gmail.com"
+    reply_to = new_email_to
     #ics message attachment portion adapted from http://stackoverflow.com/questions/4823574/sending-meeting-invitations-with-python
     #this ics message handles sign ups
     ics_message = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:Advising-t\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:" + uid + "\r\nDTSTAMP:" + ics_created_on + "\r\nDTSTART:" + appt_start_date + "\r\nDTEND:"+ appt_end_date + "\r\nSUMMARY:" + email_subject + "\r\nORGANIZER;CN=" + reply_to + ":MAILTO:" + reply_to + "\r\nATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN" + new_email_to + ";X-NUM-GUESTS=0:MAILTO:" + new_email_to + "DESCRIPTION:" + email_body + "\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
@@ -204,9 +207,7 @@ if email_subject.startswith("Advising Signup with"):
     InsertNewAppt(db, instructor_name, new_email_to, name, student_email, appt_date_str, "Pending", appt_time_beg_str, appt_time_end_str, uid)
 elif email_subject.startswith("Advising Signup Cancellation"):
     uid = appt_start_date + student_email
-    # remove, for test
-    new_email_to = "profiod1@outlook.com"
-    reply_to = "procmailtestsrelease@gmail.com"
+    reply_to = new_email_to
     #ics message attachment portion adapted from http://stackoverflow.com/questions/4823574/sending-meeting-invitations-with-python
     ics_message = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:Advising-t\r\nMETHOD:CANCEL\r\nBEGIN:VEVENT\r\nUID:" + uid + "\r\nDTSTAMP:" + ics_created_on + "\r\nDTSTART:" + appt_start_date + "\r\nDTEND:"+ appt_end_date + "\r\nSUMMARY:" + email_subject + "\r\nORGANIZER;CN=" + reply_to + ":mailto:" + reply_to + "\r\nDESCRIPTION:" + email_body + "\r\nATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN" + new_email_to + ";X-NUM-GUESTS=1:MAILTO:" + new_email_to + "\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
     ics_sect = MIMEText(ics_message,'calendar;method=CANCEL')
@@ -231,15 +232,6 @@ new_email_alternative.attach(email_sect)
 new_email_alternative.attach(ics_sect)
 
 new_email_obj.attach(new_email_alternative)
-
-# used for testing to see if attachment is populated
-mailServer = smtplib.SMTP('smtp.gmail.com', 587)
-mailServer.ehlo()
-mailServer.starttls()
-mailServer.ehlo()
-mailServer.login("procmailtestsrelease@gmail.com", "gobeavers!")
-mailServer.sendmail(email_from, new_email_to, new_email_obj.as_string())
-mailServer.close()
 
 # print the final email adapted from http://stackoverflow.com/questions/389398/trouble-with-encoding-in-emails
 out_obj = StringIO()
