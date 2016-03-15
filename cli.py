@@ -311,12 +311,12 @@ def getSpecificID(appt):
                 #else:
                 pendingCancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
                 try:
-                    cur_id = int(current_id)
-                    cli_text_window.addstr("\n id # -> " + cur_id + "\n", curses.color_pair(1))// check to make sure we have the right number
+                    cur_id = int(current_id)#attempt to see if it is a string / int error
+                    cli_text_window.addstr("\n id # -> " + cur_id + "\n", curses.color_pair(1))# check to make sure we have the right number
                     #sql = "DELETE FROM APPOINTMENT WHERE Id =(id)\
                     sql = "DELETE FROM (db) APPOINTMENT WHERE APPOINTMENT ID =(id)\
-                    VALUES('%s','%s')" %\
-                    (db,cur_id)
+                    VALUES('%s')" %\
+                    (cur_id)
                     #cursor.execute(""" Delete FROM Appointment WHERE APPOINTMENT Id = %s """,(current_id) )
                     cursor.execute(sql)
                     db.commit()
