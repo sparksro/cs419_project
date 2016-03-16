@@ -182,6 +182,7 @@ def changePassword():
 
         if newPwd1 != newPwd2:
             cli_text_window.clear()
+            cli_text_window.refresh()
             cli_text_window.addstr("passwords must match!", curses.color_pair(1))
     
     if newPwd1 == newPwd2:
@@ -306,10 +307,10 @@ def getSpecificID(appt):
                 cursor = db.cursor()
                 #send cancellation email
                 apptTime = appt[0].get("StartTime") + " - " + appt[0].get("EndTime")
-                #if appt[0].get("Status") == "Accepted":
-                    #cancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
-                #else:
-                pendingCancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
+                if appt[0].get("Status") == "Accepted":
+                    cancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
+                else:
+                  pendingCancellationEmail(appt[0].get("StudentName"), appt[0].get("StudentEmail"), appt[0].get("Date"), apptTime, appt[0].get("FacultyName"), appt[0].get("FacultyEmail"))
                 cur_id = int(current_id)
                 
                 try:
@@ -777,15 +778,17 @@ while True:
                     print"Error: Unable to fetch data."
 
                 if secured_pswd != stored_password:
+                    disconnect(db)
+                    cli_window.clear()
                     cli_text_window.clear()
-                    cli_text_window.addstr("Password did not match, try again.", curses.color_pair(3))
+                    cli_window.box()
                     cli_text_window.refresh()
-                    cli_text_window.clear()
+                    cli_text_window.addstr("Password did not match, try again.", curses.color_pair(1))
             if secured_pswd == stored_password:
                 changePassword()
                 curses.echo(0)
             else:
-                cli_text_window.addstr("Your password did not match.", curses.color_pair(3))
+                cli_text_window.addstr("Your password did not match.", curses.color_pair(1))
 
         if c == ord('3'):#logout
             cli_text_window.refresh()
