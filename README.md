@@ -1,5 +1,6 @@
 cs419_project
 Simplified Advising Scheduling Application
+- Python based CLI / giu 
  
 EXECUTIVE SUMMARY
 Currently, OSU EECS students schedule advising appointments via an online web form. This generates an email that
